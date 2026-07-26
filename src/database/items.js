@@ -60,6 +60,33 @@ const ITEMS = {
   godcrown: { id: 'godcrown', name: 'Crown of the Bot God', emoji: '👑', slot: 'accessory', rarity: 'legendary', source: 'owner' },
   godblade: { id: 'godblade', name: 'Blade of Creation', emoji: '⚡', slot: 'weapon', rarity: 'legendary', source: 'owner' },
   godarmor: { id: 'godarmor', name: 'Armor of the Ancients', emoji: '🛡️✨', slot: 'armor', rarity: 'legendary', source: 'owner' },
+  godhalo: { id: 'godhalo', name: 'Halo of Omniscience', emoji: '😇', slot: 'accessory', rarity: 'legendary', source: 'owner' },
+  godthrone: { id: 'godthrone', name: 'Throne of the Bot God', emoji: '🪑👑', slot: null, rarity: 'legendary', source: 'owner' },
+
+  // ── Wave 2: More shop items ───────────────────────────────
+  dagger: { id: 'dagger', name: 'Assassin Dagger', emoji: '🔪', slot: 'weapon', rarity: 'common', price: 450, source: 'shop' },
+  buckler: { id: 'buckler', name: 'Steel Buckler', emoji: '🥉', slot: 'armor', rarity: 'common', price: 400, source: 'shop' },
+  bandage: { id: 'bandage', name: 'Bandage Kit', emoji: '🩹', slot: 'consumable', rarity: 'common', price: 80, source: 'shop' },
+  necklace: { id: 'necklace', name: 'Jade Necklace', emoji: '📿', slot: 'accessory', rarity: 'uncommon', price: 1600, source: 'shop' },
+  battleaxe: { id: 'battleaxe', name: 'War Battleaxe', emoji: '🪓', slot: 'weapon', rarity: 'epic', price: 3900, source: 'shop' },
+  plateboots: { id: 'plateboots', name: 'Plate Greaves', emoji: '🥾', slot: 'armor', rarity: 'rare', price: 1900, source: 'shop' },
+  elixir: { id: 'elixir', name: 'Greater Elixir', emoji: '🧉', slot: 'consumable', rarity: 'uncommon', price: 300, source: 'shop' },
+  warbanner: { id: 'warbanner', name: 'War Banner', emoji: '🚩', slot: null, rarity: 'rare', price: 2500, source: 'shop' },
+
+  // ── Wave 2: More gacha items across every rarity ──────────
+  slingshot: { id: 'slingshot', name: 'Rusty Slingshot', emoji: '🪃', slot: 'weapon', rarity: 'common', source: 'gacha' },
+  strawhat: { id: 'strawhat', name: 'Straw Hat', emoji: '👒', slot: 'armor', rarity: 'common', source: 'gacha' },
+  candle: { id: 'candle', name: 'Wax Candle', emoji: '🕯️', slot: null, rarity: 'common', source: 'gacha' },
+  frostblade: { id: 'frostblade', name: 'Frostbite Blade', emoji: '❄️', slot: 'weapon', rarity: 'rare', source: 'gacha' },
+  emberplate: { id: 'emberplate', name: 'Ember Plate Armor', emoji: '🔥', slot: 'armor', rarity: 'rare', source: 'gacha' },
+  windboots: { id: 'windboots', name: 'Windwalker Boots', emoji: '💨', slot: 'armor', rarity: 'uncommon', source: 'gacha' },
+  runestone: { id: 'runestone', name: 'Ancient Runestone', emoji: '🪨', slot: null, rarity: 'uncommon', source: 'gacha' },
+  shadowfang: { id: 'shadowfang', name: 'Shadowfang', emoji: '🦇', slot: 'weapon', rarity: 'epic', source: 'gacha' },
+  celestialorb: { id: 'celestialorb', name: 'Celestial Orb', emoji: '🔮', slot: 'accessory', rarity: 'epic', source: 'gacha' },
+  ancienttome: { id: 'ancienttome', name: 'Ancient Tome', emoji: '📖', slot: null, rarity: 'rare', source: 'gacha' },
+  dragonegg: { id: 'dragonegg', name: 'Dragon Egg', emoji: '🥚', slot: null, rarity: 'epic', source: 'gacha' },
+  worldbranch: { id: 'worldbranch', name: 'World Tree Branch', emoji: '🌿', slot: 'accessory', rarity: 'legendary', source: 'gacha' },
+  chronowatch: { id: 'chronowatch', name: 'Chrono Pocketwatch', emoji: '⏱️', slot: 'accessory', rarity: 'legendary', source: 'gacha' },
 };
 
 const SHOP_ITEMS = Object.values(ITEMS).filter((i) => i.source === 'shop');
