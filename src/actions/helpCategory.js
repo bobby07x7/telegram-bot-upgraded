@@ -11,7 +11,6 @@ module.exports = {
     const viewer = { isGroup: ctx.chat.type !== 'private', isOwner: isOwnerOrAdmin(ctx.from.id) };
     const categories = getAvailableCategories(commands, viewer);
     await ctx.editMessageText(buildCategoryText(categoryKey, commands, viewer), {
-      parse_mode: 'Markdown',
       ...buildCategoryKeyboard(categories, categoryKey),
     });
   },

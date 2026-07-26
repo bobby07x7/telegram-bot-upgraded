@@ -121,7 +121,7 @@ function buildCategoryText(categoryKey, commands, viewer = { isGroup: true, isOw
   if (hideOwnerStuff) {
     lines.push(`║ 🚫 This section is private and only available to the bot owner in DM.`);
   } else if (matched.length === 0) {
-    lines.push(`║ _No commands in this category yet._`);
+    lines.push(`║ No commands in this category yet.`);
   } else {
     for (const cmd of matched) {
       lines.push(`║ ${smallCaps('use')} /${cmd.name}`);
