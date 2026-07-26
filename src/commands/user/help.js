@@ -1,12 +1,14 @@
-const { buildHelpMenu } = require('../../core/menuContent');
+const { buildHelpOverviewText, getAvailableCategories } = require('../../core/menuContent');
+const { buildCategoryKeyboard, withLoadingAnimation } = require('../../core/uiHelper');
+const { isOwnerOrAdmin } = require('../../core/permissions');
 
 module.exports = {
   name: 'help',
-  description: 'List every command you have access to',
-  category: 'user',
-  ownerOnly: false,
-  execute: async (ctx, { config, commandLoader }) => {
-    const view = buildHelpMenu({ commandLoader, userId: ctx.from.id, config });
-    await ctx.reply(view.text, { parse_mode: 'Markdown', ...view.keyboard });
+  description: 'Browse all commands by category',
+  execute: async (ctx, { commands }) => {
+    const viewer = { isGroup: ctx.chat.type !== 'private', isOwner: isOwnerOrAdmin(ctx.from.id) };
+    const categories = getAvailableCategories(commands, viewer);
+    const keyboard = buildCategoryKeyboard(categories, null);
+    await withLoadingAnimation(ctx, buildHelpOverviewText(), keyboard);
   },
 };

@@ -1,15 +1,10 @@
-const { pingAnimation } = require('../../core/uiHelper');
-
 module.exports = {
   name: 'ping',
-  description: 'Check bot latency with a live animation',
-  category: 'utility',
-  ownerOnly: false,
+  description: 'Check bot response speed',
   execute: async (ctx) => {
-    const apiStart = Date.now();
-    await ctx.telegram.getMe(); // cheap round-trip to Telegram's API
-    const apiMs = Date.now() - apiStart;
-
-    await pingAnimation(ctx, async () => ({ apiMs }));
+    const start = Date.now();
+    const sent = await ctx.reply('🏓 Pinging...');
+    const latency = Date.now() - start;
+    await ctx.telegram.editMessageText(sent.chat.id, sent.message_id, undefined, `🏓 Pong! Latency: ${latency}ms`);
   },
 };

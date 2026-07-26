@@ -1,22 +1,14 @@
-const { getUser } = require('../../database/store');
-const { card, buildKeyboard } = require('../../core/uiHelper');
+const { getUser, saveUser, addHistory } = require('../../database/store');
+const { config } = require('../../config/config');
 
 module.exports = {
   name: 'bank',
-  description: 'Manage your bank account',
-  category: 'economy',
-  ownerOnly: false,
-  execute: async (ctx, { config }) => {
-    const user = getUser(ctx.from.id, config);
-    const text = card({
-      icon: '🏦',
-      title: 'Bank',
-      lines: [`Wallet: \`${user.balance}\``, `Bank: \`${user.bank}\` (safe from other players)`],
-    });
-    const keyboard = buildKeyboard([
-      [{ text: '⬆️ Deposit All', callback_data: `bank:deposit:${ctx.from.id}` },
-       { text: '⬇️ Withdraw All', callback_data: `bank:withdraw:${ctx.from.id}` }],
-    ]);
-    await ctx.reply(text, { parse_mode: 'Markdown', ...keyboard });
+  description: 'View your bank balance and available loan info',
+  execute: async (ctx) => {
+    const user = getUser(ctx.from.id);
+    await ctx.reply(
+      `🏦 *Bank*\n\nBalance: ${user.bank}${config.economy.currencySymbol}\nOutstanding loan: ${user.loan || 0}${config.economy.currencySymbol}\nMax loan available: ${user.bank * 2}${config.economy.currencySymbol}\n\nUse /deposit, /withdraw, /loan, /repay, /interest`,
+      { parse_mode: 'Markdown' }
+    );
   },
 };

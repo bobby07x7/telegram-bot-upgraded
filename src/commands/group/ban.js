@@ -1,27 +1,18 @@
-const { card, ICONS } = require('../../core/uiHelper');
+const { addGroupLog } = require('../../database/store');
+const { requireGroupAdmin } = require('../../core/permissions');
+const { resolveTarget } = require('../../core/targetResolver');
 
 module.exports = {
   name: 'ban',
-  description: 'Ban a user (reply to their message)',
-  category: 'group',
-  ownerOnly: false, // group admins gate this via Telegram's own chat-admin permission check below
+  description: 'Permanently ban a member — reply, @mention, or /ban <user_id>',
   execute: async (ctx) => {
-    if (ctx.chat.type === 'private') return ctx.reply('This only works in groups.');
-
-    const member = await ctx.telegram.getChatMember(ctx.chat.id, ctx.from.id);
-    if (!['administrator', 'creator'].includes(member.status)) {
-      return ctx.reply(`${ICONS.fail} Only group admins can use this.`);
-    }
-
-    const target = ctx.message.reply_to_message?.from;
-    if (!target) return ctx.reply('Reply to the message of the user you want to ban.');
+    if (!(await requireGroupAdmin(ctx))) return;
+    const { target } = resolveTarget(ctx, { allowIdArg: true });
+    if (!target) return ctx.reply('↩️ Reply to, @mention, or pass the user id of the member you want to ban.');
+    if (String(target.id) === String(ctx.from.id)) return ctx.reply('❌ You cannot ban yourself.');
 
     await ctx.telegram.banChatMember(ctx.chat.id, target.id);
-    const text = card({
-      icon: ICONS.group,
-      title: 'User Banned',
-      lines: [`👤 ${target.first_name} has been removed from the group.`],
-    });
-    await ctx.reply(text, { parse_mode: 'Markdown' });
+    addGroupLog(ctx.chat.id, { action: 'ban', by: ctx.from.id, target: target.id });
+    await ctx.reply(`🔨 Banned ${target.first_name || target.username || target.id}.`);
   },
 };

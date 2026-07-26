@@ -1,110 +1,193 @@
-/**
- * src/core/menuContent.js
- * Builds /start and /help. Owner-only / admin-only commands and the
- * whole "owner" category are fully invisible to normal users —
- * not disabled, not "no permission": simply not present anywhere.
- */
+const { config } = require('../config/config');
 
-const { buildKeyboard, withFooter, card, ICONS } = require('./uiHelper');
-
-const CATEGORY_META = {
-  user: { icon: ICONS.user, label: 'Profile & Stats' },
-  economy: { icon: ICONS.economy, label: 'Economy' },
-  gacha: { icon: ICONS.gacha, label: 'Gacha' },
-  media: { icon: ICONS.media, label: 'Media' },
-  group: { icon: ICONS.group, label: 'Group Tools' },
-  security: { icon: ICONS.security, label: 'Security' },
-  utility: { icon: ICONS.utility, label: 'Utility' },
-  games: { icon: ICONS.games, label: 'Mini-Games' },
-  fun: { icon: ICONS.fun, label: 'Fun' },
-  owner: { icon: ICONS.owner, label: 'Owner Panel' },
+// Category key -> display label. To add a new category, just add it here.
+const CATEGORY_LABELS = {
+  user: '👤 User',
+  economy: '💰 Economy',
+  gacha: '🎲 Gacha',
+  media: '🎵 Media',
+  group: '👥 Group',
+  security: '🛡 Security',
+  utility: '🌐 Utility',
+  games: '🎮 Games',
+  fun: '😂 Fun',
+  owner: '👑 Owner',
 };
-const PRIVILEGED_CATEGORIES = new Set(['owner']);
 
-function isPrivileged(userId, config) {
-  const admins = config?.botAdmins || [];
-  return String(userId) === String(config?.ownerId) || admins.map(String).includes(String(userId));
+// Rotates on every /start so returning users keep discovering things,
+// and brand-new users always get one concrete next action to try.
+const START_TIPS = [
+  '💡 Try /spin for a free daily gacha pull.',
+  '💡 Reply to a friend with /fight for a live PvP brawl.',
+  '💡 Use /daily to claim free coins every 24h.',
+  '💡 Check /profile to see your level, XP and stats.',
+  '💡 Explore /help to browse all 200+ commands by category.',
+  '💡 Try /slots or /rps to test your luck with coins.',
+];
+
+function pickTip() {
+  return START_TIPS[Math.floor(Math.random() * START_TIPS.length)];
 }
 
-/** Returns { category: [commands...] }, already filtered for this user. */
-function visibleCategories(commandLoader, userId, config) {
-  const privileged = isPrivileged(userId, config);
-  const byCategory = {};
-  for (const cmd of commandLoader.all()) {
-    const category = cmd.category || 'utility';
-    const restricted = cmd.ownerOnly || cmd.adminOnly || PRIVILEGED_CATEGORIES.has(category);
-    if (restricted && !privileged) continue;
-    (byCategory[category] ||= []).push(cmd);
+function buildStartText(ctx, commands, viewer = { isGroup: true, isOwner: false }) {
+  const name = escapeMd(ctx.from?.first_name || 'User');
+  const uptime = formatUptime(process.uptime());
+  const botName = escapeMd(config.bot_meta.name || 'Bot');
+
+  // If a commands map is passed, list categories that actually have
+  // commands; otherwise fall back to a static feature list.
+  const featureLines = commands
+    ? getAvailableCategories(commands, viewer).map(({ label }) => `║ • ${label}`)
+    : [
+        '║ • AI Assistant',
+        '║ • Economy',
+        '║ • Gacha',
+        '║ • Games',
+        '║ • Group Manager',
+        '║ • Media Downloader',
+        '║ • Utility Tools',
+      ];
+
+  return `
+╔══════════════════════════════╗
+║${centerText(botName, 32)}    ║
+╚══════════════════════════════╝
+👋 Hello ${name}
+I'm your All-in-One AI Assistant.
+╔═════〔 🤖 BOT INFO 〕═════╗
+║ 👤 User      : ${name}
+║ 🤖 Version   : ${config.bot_meta.version || '1.0.0'}
+║ ⚡ Runtime   : ${uptime}
+║ 🟢 Node.js   : ${process.version}
+║ 🌍 Platform  : ${process.platform}
+║
+║ 🎯 Features
+${featureLines.join('\n')}
+╚══════════════════════════════╝
+✨ Select a category below to continue.
+
+${pickTip()}
+`;
+}
+
+// Pads text with spaces on both sides to center it within a fixed-width
+// box border (used for the bot name banner).
+function centerText(text, width) {
+  const len = text.length;
+  if (len >= width) return text.slice(0, width);
+  const totalPad = width - len;
+  const left = Math.floor(totalPad / 2);
+  const right = totalPad - left;
+  return ' '.repeat(left) + text + ' '.repeat(right);
+}
+
+/**
+ * Derives the list of categories that actually have at least one command,
+ * based on the loaded commands map.
+ *
+ * BUG FIX: the "👑 Owner" category (and any owner-only commands) must never
+ * be shown inside a group — even to the owner — and in a private chat it
+ * should only be shown to the owner/admin themself. `viewer` carries that
+ * context: { isGroup, isOwner }. When omitted, defaults to the old (unsafe)
+ * behavior is NOT used — we default to "hide" for safety.
+ */
+function getAvailableCategories(commands, viewer = { isGroup: true, isOwner: false }) {
+  const present = new Set();
+  for (const cmd of commands.values()) {
+    if (!cmd.category) continue;
+    if (cmd.category === 'owner' || cmd.ownerOnly) {
+      // Owner stuff: never in a group, and only for the owner/admin in DM.
+      if (viewer.isGroup || !viewer.isOwner) continue;
+    }
+    present.add(cmd.category);
   }
-  return byCategory;
+  return Object.entries(CATEGORY_LABELS)
+    .filter(([key]) => present.has(key))
+    .map(([key, label]) => ({ key, label }));
 }
 
-function buildStartMenu({ config, userId, commandLoader }) {
-  const privileged = isPrivileged(userId, config);
-  const total = commandLoader.all().length;
-  const visibleTotal = Object.values(visibleCategories(commandLoader, userId, config)).flat().length;
+function buildCategoryText(categoryKey, commands, viewer = { isGroup: true, isOwner: false }) {
+  const label = CATEGORY_LABELS[categoryKey] || categoryKey;
+  const hideOwnerStuff = categoryKey === 'owner' && (viewer.isGroup || !viewer.isOwner);
 
-  const text = card({
-    icon: ICONS.star,
-    title: `Welcome to ${config.botName}`,
-    lines: [
-      `Economy, gacha, mini-games, moderation, media downloads — one clean menu.`,
-      `\`${visibleTotal}\` commands ready to use.`,
-      privileged ? `${ICONS.owner} Owner controls unlocked.` : null,
-    ].filter(Boolean),
-    footer: 'Tap a category to get started',
-  });
+  const matched = hideOwnerStuff
+    ? []
+    : [...commands.values()].filter(
+        (c) => c.category === categoryKey && (!c.ownerOnly || viewer.isOwner)
+      );
 
-  const rows = [
-    [{ text: `${ICONS.economy} Economy`, callback_data: 'menu:cat:economy' },
-     { text: `${ICONS.gacha} Gacha`, callback_data: 'menu:cat:gacha' }],
-    [{ text: `${ICONS.games} Games`, callback_data: 'menu:cat:games' },
-     { text: `${ICONS.fun} Fun`, callback_data: 'menu:cat:fun' }],
-    [{ text: `${ICONS.group} Group`, callback_data: 'menu:cat:group' },
-     { text: `${ICONS.security} Security`, callback_data: 'menu:cat:security' }],
-    [{ text: `${ICONS.utility} Utility`, callback_data: 'menu:cat:utility' },
-     { text: `${ICONS.media} Media`, callback_data: 'menu:cat:media' }],
-    [{ text: `📖 Full Help`, callback_data: 'menu:help' }],
-  ];
-  if (privileged) rows.push([{ text: `${ICONS.owner} Owner Panel`, callback_data: 'menu:cat:owner' }]);
-  rows.push([
-    { text: '👥 Support', url: config.SUPPORT_GROUP_URL },
-    { text: '➕ Add to Group', url: config.ADD_TO_GROUP_URL },
-  ]);
+  const lines = [`╔════⪼「 ${toBoldSans(label.replace(/^\S+\s/, ''))} 」`];
 
-  return { text, keyboard: buildKeyboard(rows) };
-}
-
-function buildCategoryMenu({ category, commandLoader, userId, config }) {
-  const meta = CATEGORY_META[category] || { icon: ICONS.utility, label: category };
-  const list = visibleCategories(commandLoader, userId, config)[category] || [];
-
-  const text = card({
-    icon: meta.icon,
-    title: meta.label,
-    lines: list.length
-      ? list.map((c) => `• /${c.name} — ${c.description || 'No description'}`)
-      : ['No commands available yet.'],
-  });
-  const keyboard = buildKeyboard(withFooter([], { back: 'menu:start' }));
-  return { text, keyboard };
-}
-
-/** Flat /help text, category by category, still filtered. */
-function buildHelpMenu({ commandLoader, userId, config }) {
-  const grouped = visibleCategories(commandLoader, userId, config);
-  const lines = [];
-  for (const [category, cmds] of Object.entries(grouped)) {
-    const meta = CATEGORY_META[category] || { icon: ICONS.utility, label: category };
-    lines.push(`\n${meta.icon} *${meta.label}*`);
-    cmds.forEach((c) => lines.push(`  /${c.name} — ${c.description || ''}`));
+  if (hideOwnerStuff) {
+    lines.push(`║ 🚫 This section is private and only available to the bot owner in DM.`);
+  } else if (matched.length === 0) {
+    lines.push(`║ _No commands in this category yet._`);
+  } else {
+    for (const cmd of matched) {
+      lines.push(`║ ${smallCaps('use')} /${cmd.name}`);
+      lines.push(`║ ${smallCaps(cmd.description || 'no description')}`);
+      lines.push(`║`);
+    }
+    lines.pop(); // drop trailing blank line before the footer
   }
-  const text = card({ icon: ICONS.star, title: 'All Commands', lines });
-  const keyboard = buildKeyboard(withFooter([], { back: 'menu:start' }));
-  return { text, keyboard };
+
+  lines.push(`╚════════════════════⪼`);
+
+  return lines.join('\n');
+}
+
+function buildHelpOverviewText() {
+  return (
+    `╔════⪼「 ${toBoldSans('HELP MENU')} 」\n` +
+    `║ Choose a category below\n` +
+    `║ to see its commands 👇\n` +
+    `╚════════════════════⪼`
+  );
+}
+
+function formatUptime(seconds) {
+  const s = Math.floor(seconds % 60);
+  const m = Math.floor((seconds / 60) % 60);
+  const h = Math.floor((seconds / 3600) % 24);
+  const d = Math.floor(seconds / 86400);
+  return `${d}d ${h}h ${m}m ${s}s`;
+}
+
+function escapeMd(text) {
+  return String(text).replace(/([_*[\]()~`>#+\-=|{}.!])/g, '\\$1');
+}
+
+// Converts plain ASCII letters/digits to Mathematical Sans-Bold unicode
+// (used for the "𝗜𝗱 :", "𝗡𝗮𝗺𝗲 :" style labels).
+function toBoldSans(str) {
+  return String(str).replace(/[A-Za-z0-9]/g, (c) => {
+    const code = c.charCodeAt(0);
+    if (code >= 65 && code <= 90) return String.fromCodePoint(0x1d5d4 + (code - 65)); // A-Z
+    if (code >= 97 && code <= 122) return String.fromCodePoint(0x1d5ee + (code - 97)); // a-z
+    if (code >= 48 && code <= 57) return String.fromCodePoint(0x1d7ec + (code - 48)); // 0-9
+    return c;
+  });
+}
+
+// Converts plain lowercase text to small-caps unicode
+// (used for the event/body text, e.g. "ᴋᴇᴛɪᴋ /gacha ᴜɴᴛᴜᴋ ɢᴀᴄʜᴀ.").
+const SMALL_CAPS_MAP = {
+  a: 'ᴀ', b: 'ʙ', c: 'ᴄ', d: 'ᴅ', e: 'ᴇ', f: 'ꜰ', g: 'ɢ', h: 'ʜ',
+  i: 'ɪ', j: 'ᴊ', k: 'ᴋ', l: 'ʟ', m: 'ᴍ', n: 'ɴ', o: 'ᴏ', p: 'ᴘ',
+  q: 'ǫ', r: 'ʀ', s: 'ꜱ', t: 'ᴛ', u: 'ᴜ', v: 'ᴠ', w: 'ᴡ', x: 'x',
+  y: 'ʏ', z: 'ᴢ',
+};
+
+function smallCaps(str) {
+  return String(str)
+    .toLowerCase()
+    .replace(/[a-z]/g, (c) => SMALL_CAPS_MAP[c] || c);
 }
 
 module.exports = {
-  CATEGORY_META, isPrivileged, visibleCategories,
-  buildStartMenu, buildCategoryMenu, buildHelpMenu,
+  CATEGORY_LABELS,
+  buildStartText,
+  getAvailableCategories,
+  buildCategoryText,
+  buildHelpOverviewText,
 };

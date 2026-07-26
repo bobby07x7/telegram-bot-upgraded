@@ -1,216 +1,312 @@
-/**
- * src/core/uiHelper.js
- * ---------------------------------------------------------------
- * Central UI layer for the bot: inline keyboards, loading/progress
- * animations, and reusable "card" style message formatting.
- *
- * Every command should build its reply through the helpers here so
- * the whole bot (209 commands) looks and feels consistent, instead
- * of each command hand-rolling its own markdown/buttons.
- *
- * Drop-in replacement for src/core/uiHelper.js — no other file
- * needs to change to start using it (commands opt-in gradually).
- * ---------------------------------------------------------------
- */
-
 const { Markup } = require('telegraf');
-
-// ---------------------------------------------------------------
-// Theme — change these two objects and the whole bot re-skins.
-// ---------------------------------------------------------------
-const THEME = {
-  brand: '『 𝗕𝗢𝗧 』',
-  bar: {
-    full: '█',
-    empty: '░',
-    length: 12,
-  },
-  divider: '┈'.repeat(24),
-};
-
-const ICONS = {
-  economy: '💰', gacha: '🎰', media: '🎬', group: '🛡️', security: '🔐',
-  utility: '🛠️', games: '🎮', fun: '🎉', user: '👤', owner: '👑',
-  back: '◀️', close: '✖️', next: '▶️', refresh: '🔄', loading: '⏳',
-  success: '✅', fail: '❌', warn: '⚠️', star: '✨', fire: '🔥',
-};
-
-// =================================================================
-// KEYBOARD BUILDERS
-// =================================================================
+const { config } = require('../config/config');
 
 /**
- * rows: [[{text, callback_data} | {text, url}], ...]
- * Accepts plain button objects — url buttons pass through, callback
- * buttons pass through — so existing action handlers keep working.
+ * Shows a cycling loading animation, then replaces it with the final message.
+ * Reusable everywhere — any command gets a polished loading effect in one line.
+ *
+ * @param {*} ctx Telegraf context
+ * @param {string} finalText the message to show once loading finishes
+ * @param {object} extra Telegraf extra options (reply_markup, parse_mode, etc.)
+ * @param {string[]} frames loading frame texts (default: dots animation)
+ * @param {number} frameDelayMs delay between each frame
  */
-function buildKeyboard(rows = []) {
-  const mapped = rows.map((row) =>
-    row.map((btn) =>
-      btn.url
-        ? Markup.button.url(btn.text, btn.url)
-        : Markup.button.callback(btn.text, btn.callback_data)
-    )
-  );
-  return Markup.inlineKeyboard(mapped);
-}
+async function withLoadingAnimation(ctx, finalText, extra = {}, frames = null, frameDelayMs = 350) {
+  const defaultFrames = ['⏳ Loading', '⏳ Loading.', '⏳ Loading..', '⏳ Loading...'];
+  const seq = frames || defaultFrames;
 
-/** Standard back/close footer row, appended by convention. */
-function withFooter(rows, { back, close = true } = {}) {
-  const footer = [];
-  if (back) footer.push({ text: `${ICONS.back} Back`, callback_data: back });
-  if (close) footer.push({ text: `${ICONS.close} Close`, callback_data: 'ui:close' });
-  return footer.length ? [...rows, footer] : rows;
-}
+  const sent = await ctx.reply(seq[0]);
 
-/** Simple pager for long lists (help pages, shop pages, leaderboards). */
-function paginate(items, page, perPage, callbackPrefix) {
-  const totalPages = Math.max(1, Math.ceil(items.length / perPage));
-  const p = Math.min(Math.max(1, page), totalPages);
-  const slice = items.slice((p - 1) * perPage, p * perPage);
-  const nav = [];
-  if (p > 1) nav.push({ text: '◀️', callback_data: `${callbackPrefix}:${p - 1}` });
-  nav.push({ text: `${p}/${totalPages}`, callback_data: 'ui:noop' });
-  if (p < totalPages) nav.push({ text: '▶️', callback_data: `${callbackPrefix}:${p + 1}` });
-  return { slice, page: p, totalPages, nav };
-}
-
-// =================================================================
-// STYLED TEXT
-// =================================================================
-
-/** Card-style block: title, body lines, optional footer note. */
-function card({ icon = ICONS.star, title, lines = [], footer }) {
-  const parts = [
-    `${icon} *${escapeMd(title)}*`,
-    THEME.divider,
-    ...lines,
-  ];
-  if (footer) parts.push(THEME.divider, `_${escapeMd(footer)}_`);
-  return parts.join('\n');
-}
-
-function progressBar(percent) {
-  const filled = Math.round((THEME.bar.length * percent) / 100);
-  return THEME.bar.full.repeat(filled) + THEME.bar.empty.repeat(THEME.bar.length - filled);
-}
-
-function escapeMd(str = '') {
-  return String(str).replace(/([_*[\]()~`>#+\-=|{}.!])/g, '\\$1');
-}
-
-// =================================================================
-// ANIMATIONS
-// =================================================================
-
-/**
- * Generic frame-by-frame animation over an existing sent message.
- * frames: array of strings (or {text, delay} objects).
- * Returns the final Message object so the caller can attach a
- * keyboard / continue editing afterwards.
- */
-async function playAnimation(ctx, sentMsg, frames, { parse_mode = 'Markdown' } = {}) {
-  for (const frame of frames) {
-    const text = typeof frame === 'string' ? frame : frame.text;
-    const delay = typeof frame === 'string' ? 550 : frame.delay ?? 550;
-    await sleep(delay);
+  for (let i = 1; i < seq.length; i++) {
+    await sleep(frameDelayMs);
     try {
-      await ctx.telegram.editMessageText(
-        sentMsg.chat.id,
-        sentMsg.message_id,
-        undefined,
-        text,
-        { parse_mode }
-      );
-    } catch (_) { /* ignore identical-content edit errors */ }
+      await ctx.telegram.editMessageText(sent.chat.id, sent.message_id, undefined, seq[i]);
+    } catch (_) {
+      // if the edit fails (rate limit etc.), just continue to the next frame
+    }
   }
-  return sentMsg;
-}
 
-/** Quick loading spinner for any command — call at the top, then edit with the real result. */
-async function loading(ctx, label = 'Working') {
-  const frames = ['⏳', '⌛', '⏳', '⌛'];
-  const msg = await ctx.reply(`${frames[0]} ${label}...`);
-  for (let i = 1; i < frames.length; i++) {
-    await sleep(300);
-    try {
-      await ctx.telegram.editMessageText(msg.chat.id, msg.message_id, undefined, `${frames[i]} ${label}...`);
-    } catch (_) {}
-  }
-  return msg; // caller does the final editMessageText with real content
-}
-
-/**
- * Ping-style animation: shows a progress bar filling up, then the
- * final latency card. Used by /ping and reusable anywhere a command
- * wants a "measuring..." beat before revealing a number.
- */
-async function pingAnimation(ctx, computeFn) {
-  const start = Date.now();
-  const msg = await ctx.reply(`${ICONS.loading} Pinging...\n${progressBar(0)}`);
-  const steps = [20, 45, 70, 90, 100];
-  for (const pct of steps) {
-    await sleep(180);
-    try {
-      await ctx.telegram.editMessageText(
-        msg.chat.id, msg.message_id, undefined,
-        `${ICONS.loading} Pinging...\n${progressBar(pct)}  ${pct}%`
-      );
-    } catch (_) {}
-  }
-  const result = await computeFn?.();
-  const ms = Date.now() - start;
-  const final = card({
-    icon: ICONS.fire,
-    title: 'Pong!',
-    lines: [
-      `Latency: \`${ms}ms\``,
-      result?.apiMs ? `API: \`${result.apiMs}ms\`` : null,
-      `Status: ${ICONS.success} Online`,
-    ].filter(Boolean),
-  });
-  await ctx.telegram.editMessageText(msg.chat.id, msg.message_id, undefined, final, { parse_mode: 'Markdown' });
-  return msg;
-}
-
-/**
- * "Fight" animation for games/fun commands (e.g. /fight, /duel, /kill).
- * attacker/defender: display names. Renders a short exchange, then a
- * winner card. Pure text/emoji — no external assets needed.
- */
-async function fightAnimation(ctx, { attacker, defender, winner, moves }) {
-  const defaultMoves = [
-    `${ICONS.fire} ${attacker} charges at ${defender}!`,
-    `💥 ${attacker} lands a hit!`,
-    `🛡️ ${defender} blocks and counters!`,
-    `⚔️ Both trade blows...`,
-  ];
-  const seq = moves?.length ? moves : defaultMoves;
-  const msg = await ctx.reply(`${ICONS.loading} A fight is starting...`);
-  for (const line of seq) {
-    await sleep(500);
-    try {
-      await ctx.telegram.editMessageText(msg.chat.id, msg.message_id, undefined, line);
-    } catch (_) {}
-  }
-  await sleep(500);
-  const final = card({
-    icon: '🏆',
-    title: `${winner} wins!`,
-    lines: [`${attacker} vs ${defender}`, `Winner: *${escapeMd(winner)}*`],
-  });
-  await ctx.telegram.editMessageText(msg.chat.id, msg.message_id, undefined, final, { parse_mode: 'Markdown' });
-  return msg;
+  await sleep(frameDelayMs);
+  await ctx.telegram.editMessageText(sent.chat.id, sent.message_id, undefined, finalText, extra);
+  return sent;
 }
 
 function sleep(ms) {
-  return new Promise((res) => setTimeout(res, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Emoji reel used purely for the spinning visual — the *real* result is
+// decided beforehand by the gacha engine and only revealed on the final frame.
+const REEL_SYMBOLS = ['⚪', '🟢', '🔵', '🟣', '🟡', '💠', '✨', '❔'];
+
+function randomReel(n = 3) {
+  return Array.from({ length: n }, () => REEL_SYMBOLS[Math.floor(Math.random() * REEL_SYMBOLS.length)]).join(' | ');
+}
+
+/**
+ * Casino-style slot machine / suspense animation. Spins a reel that
+ * decelerates into place, then reveals the real result card. The reel
+ * content itself is cosmetic only — the actual outcome is already decided
+ * before this runs and is only revealed on the final frame.
+ *
+ * @param {*} ctx Telegraf context
+ * @param {string} resultText final message (item card, win/loss, etc.)
+ * @param {object} extra reply_markup / parse_mode for the final message
+ * @param {string} headerLabel label shown above the spinning reels (e.g. "🎰 SPIN")
+ * @param {Function} reelFn optional () => string generator for each spin frame (default: 3-slot emoji reel)
+ * @param {string} subLabel text shown under the reel while spinning
+ */
+async function playCasinoSpin(
+  ctx,
+  resultText,
+  extra = {},
+  headerLabel = '🎰 SPINNING',
+  reelFn = randomReel,
+  subLabel = 'Rolling the reels...'
+) {
+  const frame = (reel) =>
+    `╔═══════ ${headerLabel} ═══════╗\n` +
+    `║\n` +
+    `║      [ ${reel} ]\n` +
+    `║\n` +
+    `║  ${subLabel}\n` +
+    `╚══════════════════════════╝`;
+
+  const sent = await ctx.reply(frame(reelFn()));
+
+  // Decelerating spin: fast at first, then slows down like a real machine.
+  const delays = [140, 160, 200, 260, 340, 440];
+  for (const delay of delays) {
+    await sleep(delay);
+    try {
+      await ctx.telegram.editMessageText(sent.chat.id, sent.message_id, undefined, frame(reelFn()));
+    } catch (_) {
+      // rate limit / identical content — ignore and keep spinning
+    }
+  }
+
+  await sleep(300);
+  try {
+    await ctx.telegram.editMessageText(sent.chat.id, sent.message_id, undefined, resultText, extra);
+  } catch (_) {
+    await ctx.reply(resultText, extra);
+  }
+  return sent;
+}
+
+/**
+ * Renders a simple text progress bar, e.g. [▰▰▰▰▰▱▱▱▱▱] 50%
+ */
+function buildProgressBar(current, max, length = 10) {
+  const pct = max > 0 ? Math.min(1, current / max) : 0;
+  const filled = Math.round(pct * length);
+  return `[${'▰'.repeat(filled)}${'▱'.repeat(length - filled)}] ${Math.floor(pct * 100)}%`;
+}
+
+/**
+ * Shared HP bar renderer — one definition used everywhere (fight, duel,
+ * heal, profile, etc.) so combat visuals stay visually consistent.
+ * Color shifts green -> yellow -> red as HP drops, for at-a-glance state.
+ */
+function buildHpBar(hp, max, length = 10) {
+  const safeMax = max > 0 ? max : 1;
+  const pct = Math.max(0, Math.min(1, hp / safeMax));
+  const filled = Math.round(pct * length);
+  const block = pct > 0.5 ? '🟩' : pct > 0.2 ? '🟨' : '🟥';
+  return `${block.repeat(filled)}${'⬛'.repeat(length - filled)} ${Math.max(0, hp)}/${max}`;
+}
+
+/**
+ * Sends Telegram's native "typing..." indicator. Fire-and-forget; failures
+ * (e.g. restricted chat) are swallowed since this is purely cosmetic.
+ */
+async function showTyping(ctx) {
+  try {
+    await ctx.telegram.sendChatAction(ctx.chat.id, 'typing');
+  } catch (_) {
+    // ignore — cosmetic only
+  }
+}
+
+// Punchy onomatopoeia shown during combat clash frames — purely cosmetic.
+const HIT_FX = ['💥', '⚡', '💢', '🔥', '✨'];
+function randomHitFx() {
+  return HIT_FX[Math.floor(Math.random() * HIT_FX.length)];
+}
+
+/**
+ * Cinematic multi-stage combat animation shared by /fight, /duel, /kill and
+ * any future PvP command. Plays: intro (VS card) -> N clash frames (each
+ * revealing one log line, with a live HP snapshot if hp/maxHp are given) ->
+ * final result card.
+ *
+ * The actual outcome/log must already be fully decided before this runs —
+ * this function only *reveals* it frame by frame, it never decides who wins.
+ *
+ * @param {*} ctx Telegraf context
+ * @param {object} opts
+ *   fighterA / fighterB: { name, hp, maxHp } — hp/maxHp optional (omit for non-HP duels)
+ *   logLines: string[] — one line revealed per clash frame
+ *   introLabel: string — e.g. '🥊 FIGHT'
+ *   resultText: string — final message (already fully built)
+ *   extra: object — parse_mode / reply_markup for the final message
+ *   frameDelayMs: number — delay between clash frames
+ *   liveHp: { a: number[], b: number[] } — optional per-frame HP snapshots (same length as logLines)
+ */
+async function playCombatAnimation(ctx, opts) {
+  const {
+    fighterA,
+    fighterB,
+    logLines = [],
+    introLabel = '⚔️ BATTLE',
+    resultText,
+    extra = {},
+    frameDelayMs = 850,
+    liveHp = null,
+  } = opts;
+
+  const hasHp = typeof fighterA.hp === 'number' && typeof fighterB.hp === 'number';
+
+  const introText =
+    `╔═══ ${introLabel} ═══╗\n` +
+    `║\n` +
+    `║  ${fighterA.name}\n` +
+    `║       ⚔️  VS  🛡️\n` +
+    `║  ${fighterB.name}\n` +
+    `║\n` +
+    `║  Get ready...\n` +
+    `╚════════════════════╝`;
+
+  const sent = await ctx.reply(introText);
+  await sleep(700);
+
+  // Reveal the fight round by round, always showing the last few lines
+  // plus a live-updating HP snapshot so it reads like a real-time brawl.
+  const shown = [];
+  for (let i = 0; i < logLines.length; i++) {
+    shown.push(`${randomHitFx()} ${logLines[i]}`);
+    const visible = shown.slice(-5).join('\n');
+    const hpA = hasHp ? (liveHp ? liveHp.a[i] : fighterA.hp) : null;
+    const hpB = hasHp ? (liveHp ? liveHp.b[i] : fighterB.hp) : null;
+    const frame =
+      `${introLabel}\n\n` +
+      (hasHp
+        ? `${fighterA.name}\n${buildHpBar(hpA, fighterA.maxHp)}\n${fighterB.name}\n${buildHpBar(hpB, fighterB.maxHp)}\n\n`
+        : '') +
+      visible;
+    try {
+      await ctx.telegram.editMessageText(sent.chat.id, sent.message_id, undefined, frame);
+    } catch (_) {
+      // ignore edit hiccups (rate limit / identical content)
+    }
+    await sleep(frameDelayMs);
+  }
+
+  await sleep(300);
+  try {
+    await ctx.telegram.editMessageText(sent.chat.id, sent.message_id, undefined, resultText, extra);
+  } catch (_) {
+    await ctx.reply(resultText, extra);
+  }
+  return sent;
+}
+
+/**
+ * Lightweight "elimination cinematic" for joke/fun PvP commands (/kill,
+ * /roast-offs, etc.) that don't have real HP — just a few suspense frames
+ * building to a punchline reveal.
+ */
+async function playEliminationCinematic(ctx, { introLabel = '💀 ELIMINATION', suspenseFrames = [], resultText, extra = {} }) {
+  const sent = await ctx.reply(`╔═══ ${introLabel} ═══╗\n║\n║  ${suspenseFrames[0] || 'Loading target...'}\n║\n╚═══════════════════╝`);
+  for (let i = 1; i < suspenseFrames.length; i++) {
+    await sleep(500);
+    try {
+      await ctx.telegram.editMessageText(
+        sent.chat.id,
+        sent.message_id,
+        undefined,
+        `╔═══ ${introLabel} ═══╗\n║\n║  ${suspenseFrames[i]}\n║\n╚═══════════════════╝`
+      );
+    } catch (_) {
+      // ignore
+    }
+  }
+  await sleep(500);
+  try {
+    await ctx.telegram.editMessageText(sent.chat.id, sent.message_id, undefined, resultText, extra);
+  } catch (_) {
+    await ctx.reply(resultText, extra);
+  }
+  return sent;
+}
+
+/**
+ * The standard inline keyboard shown on /start.
+ * If addToGroupUrl is empty, an "add to group" link is auto-generated from the bot's username.
+ * The support/developer/add-to-group links only make sense in a DM — inside
+ * a group they're just clutter (and "Add to Group" is actively confusing
+ * when you're already in one), so they're hidden there.
+ */
+function buildStartKeyboard(botUsername, isGroup = false) {
+  const addUrl =
+    config.links.addToGroupUrl ||
+    (botUsername ? `https://t.me/${botUsername}?startgroup=true` : 'https://t.me/');
+
+  const rows = [
+    [Markup.button.callback('📖 Help', 'menu:help'), Markup.button.callback('👤 Profile', 'menu:profile')],
+    [
+      Markup.button.callback('👛 Wallet', 'menu:wallet'),
+      Markup.button.callback('🎒 Inventory', 'menu:inventory'),
+      Markup.button.callback('🛒 Store', 'menu:store'),
+    ],
+    [Markup.button.callback('🎰 Spin', 'menu:spin')],
+  ];
+
+  if (!isGroup) {
+    rows.push([
+      Markup.button.url('💬 Support Group', config.links.supportGroup),
+      Markup.button.url('📢 Support Channel', config.links.supportChannel),
+    ]);
+    rows.push([Markup.button.url('👨‍💻 Developer', config.links.developer)]);
+    rows.push([Markup.button.url('➕ Add to Group', addUrl)]);
+  }
+
+  rows.push([Markup.button.callback('✖️ Close', 'menu:close')]);
+
+  return Markup.inlineKeyboard(rows);
+}
+
+/**
+ * Keyboard for a category page: category buttons + Back + Close.
+ * categories = [{ key: 'utility', label: '⚙️ Utility' }, ...]
+ */
+function buildCategoryKeyboard(categories, activeKey) {
+  const rows = [];
+  for (let i = 0; i < categories.length; i += 2) {
+    const row = categories.slice(i, i + 2).map((c) =>
+      Markup.button.callback(
+        c.key === activeKey ? `• ${c.label} •` : c.label,
+        `help:${c.key}`
+      )
+    );
+    rows.push(row);
+  }
+  rows.push([
+    Markup.button.callback(' Back', 'menu:start'),
+    Markup.button.callback(' Close', 'menu:close'),
+  ]);
+  return Markup.inlineKeyboard(rows);
 }
 
 module.exports = {
-  THEME, ICONS,
-  buildKeyboard, withFooter, paginate,
-  card, progressBar, escapeMd,
-  playAnimation, loading, pingAnimation, fightAnimation,
+  withLoadingAnimation,
+  playCasinoSpin,
+  buildProgressBar,
+  buildHpBar,
+  showTyping,
+  playCombatAnimation,
+  playEliminationCinematic,
   sleep,
+  buildStartKeyboard,
+  buildCategoryKeyboard,
 };

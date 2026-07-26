@@ -1,17 +1,18 @@
-const { buildStartMenu } = require('../../core/menuContent');
-const { loading } = require('../../core/uiHelper');
+const { buildStartText } = require('../../core/menuContent');
+const { buildStartKeyboard, withLoadingAnimation } = require('../../core/uiHelper');
+const { isOwnerOrAdmin } = require('../../core/permissions');
 
 module.exports = {
   name: 'start',
-  description: 'Show the main menu',
-  category: 'user',
-  ownerOnly: false,
-  execute: async (ctx, { config, commandLoader }) => {
-    const msg = await loading(ctx, 'Loading menu');
-    const view = buildStartMenu({ config, userId: ctx.from.id, commandLoader });
-    await ctx.telegram.editMessageText(msg.chat.id, msg.message_id, undefined, view.text, {
-      parse_mode: 'Markdown',
-      ...view.keyboard,
-    });
+  description: 'Start the bot and open the main menu',
+  execute: async (ctx, { commands }) => {
+    const botInfo = await ctx.telegram.getMe();
+    const isGroup = ctx.chat.type !== 'private';
+    const viewer = { isGroup, isOwner: isOwnerOrAdmin(ctx.from.id) };
+    const text = buildStartText(ctx, commands, viewer);
+    const keyboard = buildStartKeyboard(botInfo.username, isGroup);
+
+    const frames = ['🎰 Starting up', '🎰 Starting up.', '🎰 Starting up..', '🎰 Starting up...', '✨ Almost ready...'];
+    await withLoadingAnimation(ctx, text, { parse_mode: 'Markdown', ...keyboard }, frames, 320);
   },
 };

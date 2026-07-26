@@ -1,49 +1,56 @@
-const { getUser, saveUser } = require('../../database/store');
-const { playAnimation, card } = require('../../core/uiHelper');
-
-const POOL = [
-  { name: 'Common Charm', rarity: 'Common', weight: 60, emoji: '⚪' },
-  { name: 'Rare Gem', rarity: 'Rare', weight: 28, emoji: '🔵' },
-  { name: 'Epic Relic', rarity: 'Epic', weight: 10, emoji: '🟣' },
-  { name: 'Legendary Artifact', rarity: 'Legendary', weight: 2, emoji: '🟡' },
-];
-const SPIN_COST = 100;
-
-function rollPool() {
-  const total = POOL.reduce((s, i) => s + i.weight, 0);
-  let r = Math.random() * total;
-  for (const item of POOL) {
-    if (r < item.weight) return item;
-    r -= item.weight;
-  }
-  return POOL[0];
-}
+const { getUser, saveUser, addHistory } = require('../../database/store');
+const { config } = require('../../config/config');
+const { rollItem } = require('../../core/gachaEngine');
+const { RARITY, displayName } = require('../../database/items');
+const { playCasinoSpin } = require('../../core/uiHelper');
 
 module.exports = {
   name: 'spin',
-  description: `Spin the gacha for ${SPIN_COST} coins`,
-  category: 'gacha',
-  ownerOnly: false,
-  execute: async (ctx, { config }) => {
-    const user = getUser(ctx.from.id, config);
-    if (user.balance < SPIN_COST) {
-      return ctx.reply(`❌ You need \`${SPIN_COST}\` coins to spin. You have \`${user.balance}\`.`, { parse_mode: 'Markdown' });
+  description: 'Spin the gacha for a random item — full casino animation',
+  execute: async (ctx) => {
+    const id = ctx.from.id;
+    const user = getUser(id);
+    const today = new Date().toDateString();
+    const lastSpinDay = user.lastSpin ? new Date(user.lastSpin).toDateString() : null;
+    const spinsToday = lastSpinDay === today ? user.spinsToday : 0;
+    const freeSpins = config.gacha.dailyFreeSpins + (user.referrals || 0);
+
+    let cost = 0;
+    if (spinsToday >= freeSpins) {
+      cost = config.gacha.spinCost;
+      if (user.balance < cost) {
+        return ctx.reply(
+          `❌ Out of free spins (${spinsToday}/${freeSpins} used today) and insufficient balance for a paid spin (${cost}${config.economy.currencySymbol}).`
+        );
+      }
     }
 
-    const result = rollPool();
-    const msg = await ctx.reply('🎰 Spinning...');
-    await playAnimation(ctx, msg, ['🎰 ⚪ ...', '🎰 🔵 ...', '🎰 🟣 ...', `🎰 ${result.emoji} ...`], { parse_mode: undefined });
-
-    saveUser(ctx.from.id, {
-      balance: user.balance - SPIN_COST,
-      gacha: { pulls: user.gacha.pulls + 1, collection: [...user.gacha.collection, result.name] },
+    const item = rollItem();
+    saveUser(id, {
+      balance: user.balance - cost,
+      inventory: [...user.inventory, item.id],
+      lastSpin: Date.now(),
+      spinsToday: spinsToday + 1,
     });
+    addHistory(id, { type: 'gacha spin', item: item.name, rarity: item.rarity });
 
-    const text = card({
-      icon: result.emoji,
-      title: `You got: ${result.name}!`,
-      lines: [`Rarity: *${result.rarity}*`, `Total pulls: \`${user.gacha.pulls + 1}\``],
-    });
-    await ctx.telegram.editMessageText(msg.chat.id, msg.message_id, undefined, text, { parse_mode: 'Markdown' });
+    const rarity = RARITY[item.rarity];
+    const costLine = cost > 0 ? `-${cost}${config.economy.currencySymbol}` : 'FREE SPIN';
+    const spinsLeft = Math.max(0, freeSpins - (spinsToday + 1));
+
+    const resultText =
+      `╔═══════ 🎰 JACKPOT REVEAL ═══════╗\n` +
+      `║\n` +
+      `║      [ ${rarity.emoji} | ${rarity.emoji} | ${rarity.emoji} ]\n` +
+      `║\n` +
+      `║   ${displayName(item)}\n` +
+      `║   ${rarity.emoji} *${rarity.label}* tier\n` +
+      `║\n` +
+      `║   💰 ${costLine}\n` +
+      `║   🎟️ Free spins left today: ${spinsLeft}\n` +
+      `╚══════════════════════════════╝\n\n` +
+      `🎒 Added to /inventory — /equip it if it's gear!`;
+
+    await playCasinoSpin(ctx, resultText, { parse_mode: 'Markdown' }, '🎰 NISHA CASINO');
   },
 };

@@ -1,38 +1,35 @@
-const { getUser, saveUser } = require('../../database/store');
-const { card } = require('../../core/uiHelper');
+// Alias-style variant of /casino with different odds/reel size for variety.
+const { getUser, saveUser, addHistory } = require('../../database/store');
+const { config } = require('../../config/config');
+const { validateBet, buildBetResultCard } = require('../../core/betting');
+const { playCasinoSpin } = require('../../core/uiHelper');
 
-const SYMBOLS = ['🍒', '🍋', '🔔', '💎', '7️⃣'];
-const BET = 50;
+const SYMBOLS = ['🔔', '🍀', '⭐', '💰'];
+const reelFn = () => [0, 0, 0].map(() => SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)]).join(' | ');
 
 module.exports = {
   name: 'slots',
-  description: `Play the slot machine (bet: ${BET} coins)`,
-  category: 'games',
-  ownerOnly: false,
-  execute: async (ctx, { config }) => {
-    const user = getUser(ctx.from.id, config);
-    if (user.balance < BET) return ctx.reply(`❌ You need \`${BET}\` coins to play.`, { parse_mode: 'Markdown' });
+  description: 'Play a 3-reel slot machine — /slots <bet amount>',
+  execute: async (ctx) => {
+    const amount = parseInt(ctx.message.text.split(' ')[1], 10);
+    const user = getUser(ctx.from.id);
+    const error = validateBet(amount, user.balance);
+    if (error) return ctx.reply(`❓ ${error}\nUsage: /slots <bet amount>`);
 
-    const msg = await ctx.reply('🎰 [ ❓ | ❓ | ❓ ]');
-    const spins = 5;
-    let reel = [];
-    for (let i = 0; i < spins; i++) {
-      reel = Array.from({ length: 3 }, () => SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)]);
-      await new Promise((r) => setTimeout(r, 250));
-      try {
-        await ctx.telegram.editMessageText(msg.chat.id, msg.message_id, undefined, `🎰 [ ${reel.join(' | ')} ]`);
-      } catch (_) {}
-    }
+    const reels = [0, 0, 0].map(() => SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)]);
+    const win = reels[0] === reels[1] && reels[1] === reels[2];
+    const delta = win ? amount * 3 : -amount;
 
-    const win = reel[0] === reel[1] && reel[1] === reel[2];
-    const payout = win ? BET * 5 : 0;
-    saveUser(ctx.from.id, { balance: user.balance - BET + payout });
+    saveUser(ctx.from.id, { balance: user.balance + delta });
+    addHistory(ctx.from.id, { type: 'slots spin', amount: delta });
 
-    const text = card({
-      icon: win ? '🏆' : '🎰',
-      title: win ? 'JACKPOT!' : 'No match',
-      lines: [`[ ${reel.join(' | ')} ]`, win ? `+\`${payout}\` coins!` : `-\`${BET}\` coins`],
+    const resultText = buildBetResultCard({
+      title: '🎰 SLOT MACHINE',
+      lines: [`[ ${reels.join(' | ')} ]`, `Bet: ${amount}${config.economy.currencySymbol}`],
+      won: win,
+      delta,
     });
-    await ctx.telegram.editMessageText(msg.chat.id, msg.message_id, undefined, text, { parse_mode: 'Markdown' });
+
+    await playCasinoSpin(ctx, resultText, { parse_mode: 'Markdown' }, '🎰 SLOTS', reelFn);
   },
 };

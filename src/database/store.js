@@ -1,66 +1,200 @@
 const fs = require('fs');
 const path = require('path');
+const logger = require('../core/logger');
 
 const DB_PATH = path.join(__dirname, '..', '..', 'storage', 'db.json');
 
-function readDb() {
+function loadDb() {
   if (!fs.existsSync(DB_PATH)) {
-    const fresh = { users: {}, groups: {} };
-    fs.writeFileSync(DB_PATH, JSON.stringify(fresh, null, 2));
-    return fresh;
+    return { users: {}, groups: {}, usernames: {} };
   }
-  return JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
+  try {
+    const db = JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
+    if (!db.usernames) db.usernames = {};
+    return db;
+  } catch (err) {
+    logger.error(`Failed to read db.json, starting fresh: ${err.message}`);
+    return { users: {}, groups: {}, usernames: {} };
+  }
 }
 
-function writeDb(data) {
-  fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2));
+function saveDb(db) {
+  fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2));
 }
 
-const DEFAULT_USER = (config) => ({
-  balance: config.economy.startingBalance,
+const DEFAULT_USER = () => ({
+  username: null,
+  firstName: null,
+  balance: 0,
   bank: 0,
   xp: 0,
   level: 1,
+  inventory: [],
+  equipped: { weapon: null, armor: null, accessory: null },
+  badges: [],
+  referrals: 0,
+  referredBy: null,
   lastDaily: 0,
   lastWeekly: 0,
-  inventory: [],
-  gacha: { pulls: 0, collection: [] },
+  lastMonthly: 0,
+  lastSpin: 0,
+  spinsToday: 0,
+  bio: '',
+  isPremium: false,
+  history: [],
+  settings: { notifications: true },
+  createdAt: Date.now(),
 });
 
-function getUser(userId, config) {
-  const db = readDb();
-  if (!db.users[userId]) {
-    db.users[userId] = DEFAULT_USER(config);
-    writeDb(db);
+function addHistory(id, entry) {
+  const db = loadDb();
+  if (!db.users[id]) db.users[id] = DEFAULT_USER();
+  db.users[id].history = db.users[id].history || [];
+  db.users[id].history.unshift({ ...entry, at: Date.now() });
+  db.users[id].history = db.users[id].history.slice(0, 20);
+  saveDb(db);
+}
+
+const DEFAULT_GROUP = () => ({
+  settings: {
+    antilink: false,
+    antispam: false,
+    antiflood: false,
+    antitoxic: false,
+    antibot: false,
+    antiraid: false,
+    captcha: false,
+    autoReply: true,
+    cleanupJoinLeave: false,
+    welcome: true,
+  },
+  blacklist: [],
+  whitelist: [],
+  warnings: {},
+  approved: [],
+  verified: [],
+  filters: [],
+  logs: [],
+  roles: {},
+  locked: false,
+});
+
+function addGroupLog(chatId, entry) {
+  const group = getGroup(chatId);
+  const logs = [{ ...entry, at: Date.now() }, ...(group.logs || [])].slice(0, 50);
+  saveGroup(chatId, { logs });
+}
+
+function getUser(id) {
+  const db = loadDb();
+  if (!db.users[id]) {
+    db.users[id] = DEFAULT_USER();
+    saveDb(db);
+    return db.users[id];
   }
-  return db.users[userId];
-}
 
-function saveUser(userId, patch) {
-  const db = readDb();
-  db.users[userId] = { ...db.users[userId], ...patch };
-  writeDb(db);
-  return db.users[userId];
-}
-
-function getGroup(groupId) {
-  const db = readDb();
-  if (!db.groups[groupId]) {
-    db.groups[groupId] = {
-      security: { antiSpam: false, antiFlood: false, antiLink: false, antiRaid: false },
-      blacklist: [], whitelist: [], filters: [],
-      welcomeMessage: null,
-    };
-    writeDb(db);
+  // Backfill any fields introduced after this user record was first created
+  // (e.g. `equipped`, `username`) without touching their existing data,
+  // and only write back if something was actually missing.
+  const existing = db.users[id];
+  const defaults = DEFAULT_USER();
+  let changed = false;
+  for (const key of Object.keys(defaults)) {
+    if (!(key in existing)) {
+      existing[key] = defaults[key];
+      changed = true;
+    }
   }
-  return db.groups[groupId];
+  if (!existing.equipped || typeof existing.equipped !== 'object') {
+    existing.equipped = { weapon: null, armor: null, accessory: null };
+    changed = true;
+  } else {
+    for (const slot of ['weapon', 'armor', 'accessory']) {
+      if (!(slot in existing.equipped)) {
+        existing.equipped[slot] = null;
+        changed = true;
+      }
+    }
+  }
+
+  if (changed) saveDb(db);
+  return existing;
 }
 
-function saveGroup(groupId, patch) {
-  const db = readDb();
-  db.groups[groupId] = { ...db.groups[groupId], ...patch };
-  writeDb(db);
-  return db.groups[groupId];
+function saveUser(id, data) {
+  const db = loadDb();
+  db.users[id] = { ...DEFAULT_USER(), ...db.users[id], ...data };
+  saveDb(db);
+  return db.users[id];
 }
 
-module.exports = { getUser, saveUser, getGroup, saveGroup };
+function getGroup(id) {
+  const db = loadDb();
+  if (!db.groups[id]) {
+    db.groups[id] = DEFAULT_GROUP();
+    saveDb(db);
+  }
+  return db.groups[id];
+}
+
+function saveGroup(id, data) {
+  const db = loadDb();
+  db.groups[id] = { ...DEFAULT_GROUP(), ...db.groups[id], ...data };
+  saveDb(db);
+  return db.groups[id];
+}
+
+/**
+ * Called on every incoming update (see app.js middleware) to keep a
+ * username -> id index up to date, so @mention targeting works even
+ * when the mentioned user hasn't replied/isn't in the current chat.
+ */
+function trackUser(from) {
+  if (!from || !from.id) return;
+  const db = loadDb();
+  if (!db.users[from.id]) db.users[from.id] = DEFAULT_USER();
+  db.users[from.id].username = from.username || db.users[from.id].username || null;
+  db.users[from.id].firstName = from.first_name || db.users[from.id].firstName || null;
+  if (from.username) {
+    db.usernames[from.username.toLowerCase()] = String(from.id);
+  }
+  saveDb(db);
+}
+
+/**
+ * Resolves a "@username" (with or without the @) to a known user id,
+ * based on everyone the bot has ever seen. Returns null if unknown.
+ */
+function resolveUsername(username) {
+  const db = loadDb();
+  const clean = String(username).replace(/^@/, '').toLowerCase();
+  return db.usernames[clean] || null;
+}
+
+function getLeaderboard(limit = 10) {
+  const db = loadDb();
+  return Object.entries(db.users)
+    .map(([id, u]) => ({ id, ...u }))
+    .sort((a, b) => b.balance + b.bank - (a.balance + a.bank))
+    .slice(0, limit);
+}
+
+function getAllUserIds() {
+  const db = loadDb();
+  return Object.keys(db.users);
+}
+
+module.exports = {
+  getUser,
+  saveUser,
+  getGroup,
+  saveGroup,
+  getLeaderboard,
+  addHistory,
+  addGroupLog,
+  getAllUserIds,
+  trackUser,
+  resolveUsername,
+  DEFAULT_USER,
+  DEFAULT_GROUP,
+};
