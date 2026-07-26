@@ -150,8 +150,9 @@ function saveGroup(id, data) {
  * when the mentioned user hasn't replied/isn't in the current chat.
  */
 function trackUser(from) {
-  if (!from || !from.id) return;
+  if (!from || !from.id) return { isNew: false };
   const db = loadDb();
+  const isNew = !db.users[from.id];
   if (!db.users[from.id]) db.users[from.id] = DEFAULT_USER();
   db.users[from.id].username = from.username || db.users[from.id].username || null;
   db.users[from.id].firstName = from.first_name || db.users[from.id].firstName || null;
@@ -159,6 +160,7 @@ function trackUser(from) {
     db.usernames[from.username.toLowerCase()] = String(from.id);
   }
   saveDb(db);
+  return { isNew };
 }
 
 /**

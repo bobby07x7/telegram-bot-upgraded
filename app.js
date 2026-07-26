@@ -7,6 +7,7 @@ const { safeExecute, registerGlobalHandlers } = require('./src/core/errorHandler
 const { getState } = require('./src/database/botState');
 const { isOwnerOrAdmin } = require('./src/core/permissions');
 const { trackUser } = require('./src/database/store');
+const { logStartup, logNewUser, logError } = require('./src/core/telegramLogger');
 
 async function bootstrap() {
   validateConfig();
@@ -22,7 +23,8 @@ async function bootstrap() {
   // even for users the bot has only seen once, in any chat.
   bot.use((ctx, next) => {
     try {
-      trackUser(ctx.from);
+      const { isNew } = trackUser(ctx.from);
+      if (isNew) logNewUser(bot, ctx.from); // fire-and-forget, never blocks the update
       if (ctx.message?.reply_to_message?.from) trackUser(ctx.message.reply_to_message.from);
     } catch (err) {
       logger.error(`trackUser middleware failed: ${err.message}`);
@@ -61,6 +63,7 @@ async function bootstrap() {
         await action.handler(ctx, { config, logger, commands });
       } catch (err) {
         logger.error(`Error in action "${action.id}": ${err.stack || err.message}`);
+        logError(bot, `action:${action.id}`, err);
         try {
           await ctx.answerCbQuery('❌ Something went wrong.');
         } catch (_) {
@@ -72,6 +75,8 @@ async function bootstrap() {
 
   await bot.launch();
   logger.info(`✅ Bot started with ${commands.size} command(s) and ${actions.size} action(s) loaded.`);
+  const botInfo = await bot.telegram.getMe();
+  logStartup(bot, { commandCount: commands.size, actionCount: actions.size, username: botInfo.username });
 
   process.once('SIGINT', () => bot.stop('SIGINT'));
   process.once('SIGTERM', () => bot.stop('SIGTERM'));

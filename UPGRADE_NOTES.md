@@ -51,6 +51,19 @@ a static wall of text.
   blocked, not just hidden from the menu. This is defense-in-depth and was
   left untouched.
 
+## 5. Log group (`LOG_GROUP_ID`)
+New `src/core/telegramLogger.js` posts operational events to a Telegram
+group/channel of your choice:
+- 🟢 Bot startup (command/action count, username)
+- 🆕 First-ever interaction from a brand-new user (name, username, id)
+- 🔴 Any uncaught error — command execution, inline-button actions,
+  Telegraf-level errors, and process-level unhandled rejections/exceptions
+
+Configured via `LOG_GROUP_ID` in `.env` (defaults to `-1003666356509` if
+unset — **you must add the bot to that group as an admin** or log posts
+will just fail silently with a warning in the local log file; nothing
+else breaks). See the README for setup.
+
 ## Suggested next steps (not done in this pass, to keep changes reviewable)
 - Apply `playCombatAnimation` / `playEliminationCinematic` to `/rob`,
   `/roast`, `/roulette`, `/race`, `/ludo` for the same cinematic feel.

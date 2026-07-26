@@ -9,6 +9,11 @@ const config = {
   bot: {
     token: process.env.BOT_TOKEN,
     ownerId: process.env.OWNER_ID,
+    // Telegram group/channel the bot posts operational logs to (startup,
+    // new users, errors). Must be a supergroup/channel id (starts with
+    // -100...) and the bot must be a member/admin of it. Leave empty to
+    // disable log-group posting entirely.
+    logGroupId: process.env.LOG_GROUP_ID || '-1003666356509',
   },
   bot_meta: {
     name: process.env.BOT_NAME || 'My Bot',

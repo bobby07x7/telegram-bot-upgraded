@@ -28,6 +28,9 @@ Required:
 - `BOT_TOKEN` — from [@BotFather](https://t.me/BotFather)
 - `OWNER_ID` — your numeric Telegram ID (get it from [@userinfobot](https://t.me/userinfobot))
 
+Optional (log group — bot posts startup/new-user/error logs here):
+- `LOG_GROUP_ID` — a supergroup/channel id (starts with `-100...`). Add the bot to that group **as an admin** first, otherwise log posts will silently fail (a warning is written to the local log file, nothing crashes). Defaults to `-1003666356509` if not set.
+
 Optional (used by the `/start` menu buttons):
 - `BOT_NAME`, `SUPPORT_GROUP_URL`, `SUPPORT_CHANNEL_URL`, `DEVELOPER_URL`, `ADD_TO_GROUP_URL`
 

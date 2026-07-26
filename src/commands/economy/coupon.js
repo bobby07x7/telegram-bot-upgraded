@@ -5,6 +5,6 @@ module.exports = {
   name: 'coupon',
   description: 'View info about the coupon/redeem code system',
   execute: async (ctx) => {
-    await ctx.reply('🎟️ Got a coupon code? Use /redeem <code> to claim it.');
+    await ctx.reply('🎟️ Got a code? Use /redeem <code> to claim it.');
   },
 };
