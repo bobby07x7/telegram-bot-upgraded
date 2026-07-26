@@ -1,5 +1,6 @@
 const { getUser, saveUser, addHistory } = require('../../database/store');
 const { config } = require('../../config/config');
+const { protectMessage, isProtectedTarget } = require('../../core/godProtect');
 
 const ROB_COOLDOWN_MS = 2 * 60 * 60 * 1000; // 2 hours between attempts
 const ROB_MIN_TARGET_BALANCE = 100; // target must have at least this much to be worth robbing
@@ -17,6 +18,9 @@ module.exports = {
     if (!target) return ctx.reply('↩️ Reply to the user you want to rob.\nUsage: /rob (as a reply)');
     if (target.id === robberId) return ctx.reply('❌ You cannot rob yourself.');
     if (target.is_bot) return ctx.reply('🤖 You cannot rob a bot.');
+    if (isProtectedTarget(target.id)) {
+      return ctx.reply(protectMessage(target.first_name), { parse_mode: 'Markdown' });
+    }
 
     const robber = getUser(robberId);
     const now = Date.now();

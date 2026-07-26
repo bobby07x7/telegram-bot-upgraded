@@ -1,6 +1,7 @@
 const { getUser, saveUser, addHistory } = require('../../database/store');
 const { config } = require('../../config/config');
 const { playCombatAnimation, buildHpBar } = require('../../core/uiHelper');
+const { protectMessage, isProtectedTarget } = require('../../core/godProtect');
 
 const HIT_VERBS = ['punches', 'kicks', 'slams', 'uppercuts', 'tackles', 'smashes'];
 
@@ -12,6 +13,9 @@ module.exports = {
     if (!target) return ctx.reply('↩️ Reply to the user you want to fight.\nUsage: /fight [bet amount] (as a reply)');
     if (target.id === ctx.from.id) return ctx.reply('❌ You cannot fight yourself.');
     if (target.is_bot) return ctx.reply('🤖 You cannot fight a bot.');
+    if (isProtectedTarget(target.id)) {
+      return ctx.reply(protectMessage(target.first_name), { parse_mode: 'Markdown' });
+    }
 
     const { currencySymbol, xpPerLevel } = config.economy;
     const MAX_HP = 100;

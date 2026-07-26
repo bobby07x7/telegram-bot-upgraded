@@ -44,6 +44,22 @@ const ITEMS = {
   excalibur: { id: 'excalibur', name: 'Excalibur', emoji: '⚡', slot: 'weapon', rarity: 'legendary', source: 'gacha' },
   igem: { id: 'igem', name: 'Infinity Gem', emoji: '♾️', slot: 'accessory', rarity: 'legendary', source: 'gacha' },
   kheart: { id: 'kheart', name: "Kraken's Heart", emoji: '🐙', slot: 'accessory', rarity: 'legendary', source: 'gacha' },
+
+  // ── New shop items ──────────────────────────────────────
+  hammer: { id: 'hammer', name: "Thunder Hammer", emoji: '🔨', slot: 'weapon', rarity: 'rare', price: 2800, source: 'shop' },
+  helmet: { id: 'helmet', name: 'Knight Helmet', emoji: '🪖', slot: 'armor', rarity: 'uncommon', price: 1400, source: 'shop' },
+  wings: { id: 'wings', name: 'Angel Wings', emoji: '🪽', slot: 'accessory', rarity: 'epic', price: 4200, source: 'shop' },
+
+  // ── New gacha-only items ─────────────────────────────────
+  starblade: { id: 'starblade', name: 'Starfall Blade', emoji: '🌠', slot: 'weapon', rarity: 'legendary', source: 'gacha' },
+  voidarmor: { id: 'voidarmor', name: 'Void Reaver Armor', emoji: '🖤', slot: 'armor', rarity: 'epic', source: 'gacha' },
+  moonstone: { id: 'moonstone', name: 'Moonstone Talisman', emoji: '🌙', slot: 'accessory', rarity: 'rare', source: 'gacha' },
+
+  // ── Owner-exclusive items — never buyable or in the gacha pool.
+  // Only obtainable via the owner-only /grant command (see commands/owner/grant.js).
+  godcrown: { id: 'godcrown', name: 'Crown of the Bot God', emoji: '👑', slot: 'accessory', rarity: 'legendary', source: 'owner' },
+  godblade: { id: 'godblade', name: 'Blade of Creation', emoji: '⚡', slot: 'weapon', rarity: 'legendary', source: 'owner' },
+  godarmor: { id: 'godarmor', name: 'Armor of the Ancients', emoji: '🛡️✨', slot: 'armor', rarity: 'legendary', source: 'owner' },
 };
 
 const SHOP_ITEMS = Object.values(ITEMS).filter((i) => i.source === 'shop');

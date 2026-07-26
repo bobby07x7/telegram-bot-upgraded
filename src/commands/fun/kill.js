@@ -1,4 +1,5 @@
 const { playEliminationCinematic } = require('../../core/uiHelper');
+const { protectMessage, isProtectedTarget } = require('../../core/godProtect');
 
 const KILL_LINES = [
   'was launched into the sun. ☀️',
@@ -28,6 +29,9 @@ module.exports = {
     if (!target) return ctx.reply('↩️ Reply to the user you want to "kill".\nUsage: /kill (as a reply)');
     if (target.id === ctx.from.id) return ctx.reply('❌ You cannot target yourself... unless you really want to.');
     if (target.is_bot) return ctx.reply("🤖 I'm immortal, try someone else.");
+    if (isProtectedTarget(target.id)) {
+      return ctx.reply(protectMessage(target.first_name), { parse_mode: 'Markdown' });
+    }
 
     const line = KILL_LINES[Math.floor(Math.random() * KILL_LINES.length)];
     const resultText = `☠️ *ELIMINATED!*\n\n💀 ${target.first_name} ${line}\n\n_Rest in pixels._ 🕊️`;

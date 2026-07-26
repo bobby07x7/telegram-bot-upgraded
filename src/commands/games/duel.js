@@ -1,6 +1,7 @@
 const { getUser, saveUser, addHistory } = require('../../database/store');
 const { config } = require('../../config/config');
 const { playEliminationCinematic } = require('../../core/uiHelper');
+const { protectMessage, isProtectedTarget } = require('../../core/godProtect');
 
 const CLASH_FRAMES = [
   'Weapons drawn... ⚔️',
@@ -20,6 +21,9 @@ module.exports = {
     if (!target) return ctx.reply('↩️ Reply to the user you want to duel.\nUsage: /duel <amount>');
     if (target.id === challengerId) return ctx.reply('❌ You cannot duel yourself.');
     if (target.is_bot) return ctx.reply('🤖 You cannot duel a bot.');
+    if (isProtectedTarget(target.id)) {
+      return ctx.reply(protectMessage(target.first_name), { parse_mode: 'Markdown' });
+    }
     if (!amount || amount <= 0) return ctx.reply('Usage: /duel <amount> (as a reply to your opponent)');
 
     const challenger = getUser(challengerId);
