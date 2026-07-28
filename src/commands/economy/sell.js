@@ -1,6 +1,7 @@
 const { getUser, saveUser, addHistory } = require('../../database/store');
 const { config } = require('../../config/config');
 const { getItem, findItem, displayName } = require('../../database/items');
+const { getProgress } = require('../../core/forge');
 
 module.exports = {
   name: 'sell',
@@ -21,6 +22,9 @@ module.exports = {
 
     const stored = user.inventory[idx];
     const meta = getItem(stored) || item;
+    if (meta && getProgress(user, meta.id).locked) {
+      return ctx.reply(`🔒 ${displayName(meta)} is locked. Use /itemlock ${meta.id} to unlock it first.`);
+    }
     const sellPrice = meta?.price ? Math.floor(meta.price / 2) : 50;
     const label = meta ? displayName(meta) : stored;
 

@@ -12,6 +12,10 @@ const RARITY = {
   rare: { label: 'Rare', emoji: '🔵', color: '#3A8CFF', weight: 12 },
   epic: { label: 'Epic', emoji: '🟣', color: '#B84AFF', weight: 6 },
   legendary: { label: 'Legendary', emoji: '🟡', color: '#FFD24A', weight: 2 },
+  mythic: { label: 'Mythic', emoji: '🔴', color: '#FF3A3A', weight: 0.7 },
+  divine: { label: 'Divine', emoji: '⚫', color: '#1A1A1A', weight: 0.2 },
+  celestial: { label: 'Celestial', emoji: '🌌', color: '#8A6BFF', weight: 0.08 },
+  infinity: { label: 'Infinity', emoji: '♾️', color: '#FFFFFF', weight: 0.02 },
 };
 
 // Shop = buyable with coins directly. Gacha = only obtainable via /spin.
@@ -87,6 +91,103 @@ const ITEMS = {
   dragonegg: { id: 'dragonegg', name: 'Dragon Egg', emoji: '🥚', slot: null, rarity: 'epic', source: 'gacha' },
   worldbranch: { id: 'worldbranch', name: 'World Tree Branch', emoji: '🌿', slot: 'accessory', rarity: 'legendary', source: 'gacha' },
   chronowatch: { id: 'chronowatch', name: 'Chrono Pocketwatch', emoji: '⏱️', slot: 'accessory', rarity: 'legendary', source: 'gacha' },
+
+  // ── Wave 3: More shop items ────────────────────────────────
+  cutlass: { id: 'cutlass', name: 'Pirate Cutlass', emoji: '🗡️', slot: 'weapon', rarity: 'uncommon', price: 1100, source: 'shop' },
+  spiritblade: { id: 'spiritblade', name: 'Spirit Blade', emoji: '👻', slot: 'weapon', rarity: 'legendary', price: 32000, source: 'shop' },
+  obsidianplate: { id: 'obsidianplate', name: 'Obsidian Plate', emoji: '🖤', slot: 'armor', rarity: 'legendary', price: 30000, source: 'shop' },
+  scarf: { id: 'scarf', name: 'Hero Scarf', emoji: '🧣', slot: 'accessory', rarity: 'common', price: 350, source: 'shop' },
+  goggles: { id: 'goggles', name: 'Tactical Goggles', emoji: '🥽', slot: 'accessory', rarity: 'rare', price: 2600, source: 'shop' },
+  antidote: { id: 'antidote', name: 'Antidote', emoji: '💊', slot: 'consumable', rarity: 'common', price: 120, source: 'shop' },
+  staminadrink: { id: 'staminadrink', name: 'Stamina Drink', emoji: '🥤', slot: 'consumable', rarity: 'common', price: 90, source: 'shop' },
+  megapotion: { id: 'megapotion', name: 'Mega Health Potion', emoji: '🍾', slot: 'consumable', rarity: 'rare', price: 900, source: 'shop' },
+  firecracker: { id: 'firecracker', name: 'Firecracker Pack', emoji: '🧨', slot: null, rarity: 'uncommon', price: 700, source: 'shop' },
+  trophy: { id: 'trophy', name: 'Golden Trophy', emoji: '🏆', slot: null, rarity: 'epic', price: 6000, source: 'shop' },
+  medal: { id: 'medal', name: 'Honor Medal', emoji: '🎖️', slot: null, rarity: 'uncommon', price: 1000, source: 'shop' },
+
+  // ── Wave 4: Nisha Grand Store — higher weapon/armor tiers ──
+  steelsword: { id: 'steelsword', name: 'Steel Sword', emoji: '⚔️', slot: 'weapon', rarity: 'uncommon', price: 1500, source: 'shop' },
+  shadowkatana: { id: 'shadowkatana', name: 'Shadow Katana', emoji: '🗡️', slot: 'weapon', rarity: 'epic', price: 9500, source: 'shop' },
+  dragonslayer: { id: 'dragonslayer', name: 'Dragon Slayer', emoji: '⚔️', slot: 'weapon', rarity: 'legendary', price: 25000, source: 'shop' },
+  celestialblade: { id: 'celestialblade', name: 'Celestial Blade', emoji: '🌌', slot: 'weapon', rarity: 'celestial', price: 60000, source: 'shop' },
+  infinitysword: { id: 'infinitysword', name: 'Infinity Sword', emoji: '♾️', slot: 'weapon', rarity: 'infinity', price: 150000, source: 'shop' },
+
+  leatherarmor: { id: 'leatherarmor', name: 'Leather Armor', emoji: '🥋', slot: 'armor', rarity: 'common', price: 800, source: 'shop' },
+  knightarmor: { id: 'knightarmor', name: 'Knight Armor', emoji: '🛡️', slot: 'armor', rarity: 'uncommon', price: 3500, source: 'shop' },
+  shadowarmor: { id: 'shadowarmor', name: 'Shadow Armor', emoji: '🖤', slot: 'armor', rarity: 'rare', price: 8000, source: 'shop' },
+  dragonarmor: { id: 'dragonarmor', name: 'Dragon Armor', emoji: '🐲', slot: 'armor', rarity: 'epic', price: 18000, source: 'shop' },
+  royalarmor: { id: 'royalarmor', name: 'Royal Armor', emoji: '👑', slot: 'armor', rarity: 'legendary', price: 40000, source: 'shop' },
+  divinearmor: { id: 'divinearmor', name: 'Divine Armor', emoji: '⚫', slot: 'armor', rarity: 'divine', price: 90000, source: 'shop' },
+
+  timewatch: { id: 'timewatch', name: 'Time Watch', emoji: '⌚', slot: 'accessory', rarity: 'epic', price: 12000, source: 'shop' },
+  infinitystone: { id: 'infinitystone', name: 'Infinity Stone', emoji: '💎', slot: 'accessory', rarity: 'infinity', price: 80000, source: 'shop' },
+
+  // ── Wave 4: Potions (consumables) ──────────────────────────
+  manapotion: { id: 'manapotion', name: 'Mana Potion', emoji: '💙', slot: 'consumable', rarity: 'common', price: 150, source: 'shop' },
+  speedpotion: { id: 'speedpotion', name: 'Speed Potion', emoji: '⚡', slot: 'consumable', rarity: 'uncommon', price: 800, source: 'shop' },
+  ragepotion: { id: 'ragepotion', name: 'Rage Potion', emoji: '🔥', slot: 'consumable', rarity: 'uncommon', price: 1200, source: 'shop' },
+  defensepotion: { id: 'defensepotion', name: 'Defense Potion', emoji: '🛡️', slot: 'consumable', rarity: 'uncommon', price: 1200, source: 'shop' },
+  phoenixelixir: { id: 'phoenixelixir', name: 'Phoenix Elixir', emoji: '✨', slot: 'consumable', rarity: 'legendary', price: 15000, source: 'shop' },
+
+  // ── Wave 4: Gems (new equippable 'gem' slot) ───────────────
+  gemruby: { id: 'gemruby', name: 'Ruby', emoji: '❤️', slot: 'gem', rarity: 'rare', price: 2500, source: 'shop' },
+  gememerald: { id: 'gememerald', name: 'Emerald', emoji: '💚', slot: 'gem', rarity: 'rare', price: 3000, source: 'shop' },
+  gemsapphire: { id: 'gemsapphire', name: 'Sapphire', emoji: '💙', slot: 'gem', rarity: 'rare', price: 3000, source: 'shop' },
+  gemobsidian: { id: 'gemobsidian', name: 'Obsidian Gem', emoji: '🖤', slot: 'gem', rarity: 'epic', price: 4000, source: 'shop' },
+  gemdiamond: { id: 'gemdiamond', name: 'Diamond', emoji: '🤍', slot: 'gem', rarity: 'epic', price: 8500, source: 'shop' },
+  gemcelestial: { id: 'gemcelestial', name: 'Celestial Gem', emoji: '🌈', slot: 'gem', rarity: 'celestial', price: 30000, source: 'shop' },
+
+  // ── Wave 4: Artifacts (equippable accessories) ─────────────
+  eyeofodin: { id: 'eyeofodin', name: 'Eye of Odin', emoji: '👁️', slot: 'accessory', rarity: 'legendary', price: 45000, source: 'shop' },
+  dragonheart: { id: 'dragonheart', name: 'Dragon Heart', emoji: '❤️‍🔥', slot: 'accessory', rarity: 'legendary', price: 55000, source: 'shop' },
+  stormcore: { id: 'stormcore', name: 'Storm Core', emoji: '⚡', slot: 'accessory', rarity: 'legendary', price: 65000, source: 'shop' },
+  worldtreeseed: { id: 'worldtreeseed', name: 'World Tree Seed', emoji: '🌳', slot: 'accessory', rarity: 'legendary', price: 75000, source: 'shop' },
+  infinitygauntlet: { id: 'infinitygauntlet', name: 'Infinity Gauntlet', emoji: '🧤', slot: 'accessory', rarity: 'infinity', price: 200000, source: 'shop' },
+
+  // ── Wave 4: Wings (new equippable 'wing' slot) ─────────────
+  demonwings: { id: 'demonwings', name: 'Demon Wings', emoji: '😈', slot: 'wing', rarity: 'epic', price: 18000, source: 'shop' },
+  crystalwings: { id: 'crystalwings', name: 'Crystal Wings', emoji: '💎', slot: 'wing', rarity: 'epic', price: 22000, source: 'shop' },
+  galaxywings: { id: 'galaxywings', name: 'Galaxy Wings', emoji: '🌌', slot: 'wing', rarity: 'legendary', price: 40000, source: 'shop' },
+  voidwings: { id: 'voidwings', name: 'Void Wings', emoji: '♾️', slot: 'wing', rarity: 'celestial', price: 70000, source: 'shop' },
+
+  // ── Wave 4: Pets (new equippable 'pet' slot) ───────────────
+  petwolf: { id: 'petwolf', name: 'Wolf', emoji: '🐺', slot: 'pet', rarity: 'uncommon', price: 5000, source: 'shop' },
+  petfox: { id: 'petfox', name: 'Fox', emoji: '🦊', slot: 'pet', rarity: 'rare', price: 7500, source: 'shop' },
+  pettiger: { id: 'pettiger', name: 'Tiger', emoji: '🐯', slot: 'pet', rarity: 'rare', price: 12000, source: 'shop' },
+  petunicorn: { id: 'petunicorn', name: 'Unicorn', emoji: '🦄', slot: 'pet', rarity: 'legendary', price: 40000, source: 'shop' },
+  petdragon: { id: 'petdragon', name: 'Dragon', emoji: '🐉', slot: 'pet', rarity: 'legendary', price: 85000, source: 'shop' },
+  petguardianangel: { id: 'petguardianangel', name: 'Guardian Angel', emoji: '👼', slot: 'pet', rarity: 'mythic', price: 150000, source: 'shop' },
+
+  // ── Wave 4: Summons (new equippable 'summon' slot) ─────────
+  summonskeletonking: { id: 'summonskeletonking', name: 'Skeleton King', emoji: '💀', slot: 'summon', rarity: 'epic', price: 18000, source: 'shop' },
+  summonicegolem: { id: 'summonicegolem', name: 'Ice Golem', emoji: '🧊', slot: 'summon', rarity: 'epic', price: 25000, source: 'shop' },
+  summondemonlord: { id: 'summondemonlord', name: 'Demon Lord', emoji: '😈', slot: 'summon', rarity: 'legendary', price: 60000, source: 'shop' },
+  summonphoenix: { id: 'summonphoenix', name: 'Phoenix', emoji: '🔥', slot: 'summon', rarity: 'mythic', price: 100000, source: 'shop' },
+  summonleviathan: { id: 'summonleviathan', name: 'Leviathan', emoji: '🌊', slot: 'summon', rarity: 'divine', price: 180000, source: 'shop' },
+
+  // ── Wave 4: Mounts (new equippable 'mount' slot) ───────────
+  mounthorse: { id: 'mounthorse', name: 'Horse', emoji: '🐎', slot: 'mount', rarity: 'uncommon', price: 4000, source: 'shop' },
+  mountdirewolf: { id: 'mountdirewolf', name: 'Dire Wolf', emoji: '🐺', slot: 'mount', rarity: 'rare', price: 12000, source: 'shop' },
+  mountgriffin: { id: 'mountgriffin', name: 'Griffin', emoji: '🦅', slot: 'mount', rarity: 'legendary', price: 45000, source: 'shop' },
+  mountdragon: { id: 'mountdragon', name: 'Dragon Mount', emoji: '🐉', slot: 'mount', rarity: 'mythic', price: 120000, source: 'shop' },
+
+  // ── Wave 4: Cosmetics (null slot, display/collectible only) ─
+  heroskin: { id: 'heroskin', name: 'Hero Skin', emoji: '🎨', slot: null, rarity: 'epic', price: 3000, source: 'shop' },
+  weaponskin: { id: 'weaponskin', name: 'Weapon Skin', emoji: '⚔️', slot: null, rarity: 'rare', price: 2500, source: 'shop' },
+  animatedframe: { id: 'animatedframe', name: 'Animated Frame', emoji: '🖼️', slot: null, rarity: 'epic', price: 5000, source: 'shop' },
+  nameeffect: { id: 'nameeffect', name: 'Name Effect', emoji: '🌈', slot: null, rarity: 'epic', price: 8000, source: 'shop' },
+  auraeffect: { id: 'auraeffect', name: 'Aura Effect', emoji: '✨', slot: null, rarity: 'legendary', price: 10000, source: 'shop' },
+  killeffect: { id: 'killeffect', name: 'Kill Effect', emoji: '💀', slot: null, rarity: 'legendary', price: 15000, source: 'shop' },
+
+  // ── Wave 4: Special (null slot, collectible passes/tickets) ─
+  battlepass: { id: 'battlepass', name: 'Battle Pass', emoji: '🎫', slot: null, rarity: 'epic', price: 50000, source: 'shop' },
+  vippass: { id: 'vippass', name: 'VIP Pass', emoji: '👑', slot: null, rarity: 'legendary', price: 100000, source: 'shop' },
+  mysterybox: { id: 'mysterybox', name: 'Mystery Box', emoji: '🎁', slot: null, rarity: 'rare', price: 2500, source: 'shop' },
+  luckyticket: { id: 'luckyticket', name: 'Lucky Ticket', emoji: '🎲', slot: null, rarity: 'uncommon', price: 500, source: 'shop' },
+
+  // ── Wave 5: Forge system materials ──────────────────────────
+  awakeningstone: { id: 'awakeningstone', name: 'Awakening Stone', emoji: '🪄', slot: null, rarity: 'legendary', price: 20000, source: 'shop' },
+  craftmaterial: { id: 'craftmaterial', name: 'Craft Materials', emoji: '⚒️', slot: null, rarity: 'common', price: 300, source: 'shop' },
 };
 
 const SHOP_ITEMS = Object.values(ITEMS).filter((i) => i.source === 'shop');

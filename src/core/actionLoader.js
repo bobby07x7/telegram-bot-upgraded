@@ -34,12 +34,13 @@ function loadActions() {
         continue;
       }
       actions.set(action.id, action);
-      logger.info(`Loaded action: ${action.id} (${file})`);
+      logger.debug(`Loaded action: ${action.id} (${file})`);
     } catch (err) {
       logger.error(`Failed to load action file ${file}: ${err.message}`);
     }
   }
 
+  logger.info(`Loaded ${actions.size} inline actions.`);
   return actions;
 }
 

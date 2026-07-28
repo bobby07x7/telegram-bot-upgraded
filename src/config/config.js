@@ -54,6 +54,15 @@ const config = {
   },
   env: process.env.NODE_ENV || 'development',
   logLevel: process.env.LOG_LEVEL || 'info',
+  security: {
+    // If set, every owner/admin command AND every admin-only view (menus,
+    // GOD mode, protection checks, etc.) additionally requires the user to
+    // run /loginadmin <password> for this session before they work.
+    // Leave unset (default) to keep the bot usable with no extra setup —
+    // owner/admin status alone is enough, same as before.
+    adminPassword: process.env.ADMIN_PASSWORD || '',
+    adminSessionMs: Number(process.env.ADMIN_SESSION_MS) || 60 * 60 * 1000, // 1 hour
+  },
 };
 
 // Check required variables on startup, otherwise throw a clear error

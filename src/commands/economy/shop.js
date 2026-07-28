@@ -1,42 +1,58 @@
+const { Markup } = require('telegraf');
 const { config } = require('../../config/config');
-const { SHOP_ITEMS, RARITY } = require('../../database/items');
+const { SHOP_ITEMS } = require('../../database/items');
+const { getUser } = require('../../database/store');
 
-function slotLabel(slot) {
-  const map = { weapon: '⚔️ Weapon', armor: '🛡️ Armor', accessory: '💍 Accessory', consumable: '🧪 Consumable' };
-  return map[slot] || '✨ Cosmetic';
+const SLOT_META = {
+  weapon: { label: '⚔️ Weapons', emoji: '⚔️' },
+  armor: { label: '🛡️ Armor', emoji: '🛡️' },
+  accessory: { label: '💍 Accessories', emoji: '💍' },
+  consumable: { label: '🧪 Potions', emoji: '🧪' },
+  gem: { label: '💎 Gems', emoji: '💎' },
+  wing: { label: '🪽 Wings', emoji: '🪽' },
+  pet: { label: '🐉 Pets', emoji: '🐉' },
+  summon: { label: '👹 Summons', emoji: '👹' },
+  mount: { label: '🐎 Mounts', emoji: '🐎' },
+};
+const COSMETIC_META = { label: '✨ Cosmetics', emoji: '✨' };
+
+function buildShopOverview(user) {
+  const { currencySymbol } = config.economy;
+  const counts = {};
+  for (const item of SHOP_ITEMS) {
+    const key = item.slot || 'cosmetic';
+    counts[key] = (counts[key] || 0) + 1;
+  }
+
+  const text =
+    `🏪 *NISHA STORE*\n` +
+    `Pick a category to browse.\n\n` +
+    `👛 Balance: ${user.balance}${currencySymbol}\n` +
+    `🏦 Bank: ${user.bank}${currencySymbol}`;
+
+  const catButtons = Object.entries(SLOT_META)
+    .filter(([slot]) => counts[slot])
+    .map(([slot, meta]) => Markup.button.callback(`${meta.label} (${counts[slot]})`, `shop:${slot}`));
+  if (counts.cosmetic) {
+    catButtons.push(Markup.button.callback(`${COSMETIC_META.label} (${counts.cosmetic})`, 'shop:cosmetic'));
+  }
+
+  const rows = [];
+  for (let i = 0; i < catButtons.length; i += 2) rows.push(catButtons.slice(i, i + 2));
+  rows.push([Markup.button.callback('🎒 Inventory', 'menu:inventory'), Markup.button.callback('✖️ Close', 'menu:close')]);
+
+  return { text, keyboard: Markup.inlineKeyboard(rows) };
 }
 
 module.exports = {
   name: 'shop',
-  description: 'Browse the store — professional casino-style catalog',
+  description: 'Browse the store — tap a category to see items',
   execute: async (ctx) => {
-    const { currencySymbol } = config.economy;
-    const lines = [
-      '╔══════ 🏪 𝐍𝐈𝐒𝐇𝐀 𝐒𝐓𝐎𝐑𝐄 ══════╗',
-      '║',
-    ];
-
-    // Group items by slot for a cleaner, professional catalog layout.
-    const bySlot = {};
-    for (const item of SHOP_ITEMS) {
-      bySlot[item.slot] = bySlot[item.slot] || [];
-      bySlot[item.slot].push(item);
-    }
-
-    for (const [slot, items] of Object.entries(bySlot)) {
-      lines.push(`║ ${slotLabel(slot)}`);
-      for (const item of items) {
-        const rarity = RARITY[item.rarity];
-        lines.push(`║   ${item.emoji} *${item.name}* ${rarity.emoji} ${rarity.label}`);
-        lines.push(`║   ↳ ${item.price}${currencySymbol}  •  buy: \`/buy ${item.id}\``);
-      }
-      lines.push('║');
-    }
-
-    lines.push('║ 🎒 View what you own: /inventory');
-    lines.push('║ 🧷 Equip a slot item: /equip <item>');
-    lines.push('╚═══════════════════════════╝');
-
-    await ctx.reply(lines.join('\n'), { parse_mode: 'Markdown' });
+    const user = getUser(ctx.from.id);
+    const { text, keyboard } = buildShopOverview(user);
+    await ctx.reply(text, { parse_mode: 'Markdown', ...keyboard });
   },
+  buildShopOverview,
+  SLOT_META,
+  COSMETIC_META,
 };

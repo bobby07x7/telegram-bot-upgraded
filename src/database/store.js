@@ -39,6 +39,20 @@ const DEFAULT_USER = () => ({
   lastMonthly: 0,
   lastSpin: 0,
   spinsToday: 0,
+  jailedUntil: 0,
+  robStreak: 0,
+  // Per-item forge/upgrade progress, keyed by catalog item id (see
+  // core/forge.js). Shared across every copy of that item you own — items
+  // aren't unique instances in this bot, so "your Iron Sword" is one shared
+  // progress record, not per-copy.
+  forge: {},
+  // Items moved out of active inventory into long-term storage via
+  // /itemstore and /itemtake (kept separate from bank /withdraw, which is
+  // for currency).
+  storage: [],
+  // Every item id ever bought via /buy — powers /collection. Items obtained
+  // only via /spin, /gift, or /grant won't appear here yet.
+  collectionLog: [],
   bio: '',
   isPremium: false,
   history: [],

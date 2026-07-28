@@ -2,6 +2,7 @@ const { getUser, saveUser, addHistory } = require('../../database/store');
 const { config } = require('../../config/config');
 const { playCombatAnimation, buildHpBar } = require('../../core/uiHelper');
 const { protectMessage, isProtectedTarget } = require('../../core/godProtect');
+const { getProgress, saveProgress } = require('../../core/forge');
 
 const HIT_VERBS = ['punches', 'kicks', 'slams', 'uppercuts', 'tackles', 'smashes'];
 
@@ -120,6 +121,18 @@ module.exports = {
 
     saveUser(winner.id, { hp: winnerHp, maxHp: winner.max, downedAt: null, xp: winXpResult.xp, level: winXpResult.level, balance: winnerBalance });
     saveUser(loser.id, { hp: loserHp, maxHp: loser.max, downedAt: loserDownedAt, xp: loseXpResult.xp, level: loseXpResult.level, balance: loserBalance });
+
+    // Weapon mastery: using a weapon in a won fight slowly levels it up.
+    const winnerWeaponId = winnerRecord.equipped?.weapon;
+    if (winnerWeaponId) {
+      const progress = getProgress(winnerRecord, winnerWeaponId);
+      const newXp = progress.masteryXp + 10;
+      const leveledUp = newXp >= progress.masteryLevel * 100 && progress.masteryLevel < 100;
+      saveProgress(winner.id, winnerWeaponId, {
+        masteryXp: leveledUp ? 0 : newXp,
+        masteryLevel: leveledUp ? progress.masteryLevel + 1 : progress.masteryLevel,
+      });
+    }
 
     addHistory(winner.id, { type: 'fight win', vs: loser.name, xpGained: winXp, bet });
     addHistory(loser.id, { type: 'fight loss', vs: winner.name, xpGained: loseXp, bet });

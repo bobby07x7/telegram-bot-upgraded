@@ -53,13 +53,14 @@ function loadCommands() {
         }
 
         commands.set(command.name, command);
-        logger.info(`Loaded command: /${command.name} [${command.category}] (${folder}/${file})`);
+        logger.debug(`Loaded command: /${command.name} [${command.category}] (${folder}/${file})`);
       } catch (err) {
         logger.error(`Failed to load command file ${folder}/${file}: ${err.message}`);
       }
     }
   }
 
+  logger.info(`Loaded ${commands.size} commands across ${categoryFolders.length} categories.`);
   return commands;
 }
 

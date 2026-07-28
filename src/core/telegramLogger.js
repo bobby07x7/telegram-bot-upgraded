@@ -1,6 +1,14 @@
 const { config } = require('../config/config');
 const logger = require('./logger');
 
+/** Escapes legacy-Markdown-significant characters in user-controlled text
+ * (names, usernames) before it's interpolated into a Markdown-parsed
+ * message — prevents "can't parse entities" crashes from names containing
+ * underscores, asterisks, backticks, or brackets. */
+function escapeMd(text) {
+  return String(text ?? '').replace(/([_*[\]`])/g, '\\$1');
+}
+
 /**
  * Posts a message to the configured log group (config.bot.logGroupId).
  * Silently no-ops if no log group is configured, and never throws —
@@ -38,8 +46,8 @@ function logStartup(bot, { commandCount, actionCount, username }) {
 
 /** First-ever /start or interaction from a brand-new user. */
 function logNewUser(bot, from) {
-  const name = from.first_name || 'Unknown';
-  const username = from.username ? `@${from.username}` : '_no username_';
+  const name = escapeMd(from.first_name || 'Unknown');
+  const username = from.username ? `@${escapeMd(from.username)}` : '_no username_';
   return logToGroup(
     bot,
     `🆕 *New user*\n` +
