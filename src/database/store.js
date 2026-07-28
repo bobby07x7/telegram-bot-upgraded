@@ -25,7 +25,7 @@ function saveDb(db) {
 const DEFAULT_USER = () => ({
   username: null,
   firstName: null,
-  balance: 0,
+  balance: 100000, // starter pack — every new user begins with this
   bank: 0,
   xp: 0,
   level: 1,
