@@ -24,12 +24,7 @@ async function bootstrap() {
   bot.use((ctx, next) => {
     try {
       const { isNew } = trackUser(ctx.from);
-      if (isNew) {
-        const state = getState();
-        if (!state.logIgnoreList.includes(String(ctx.from.id))) {
-          logNewUser(bot, ctx.from); // fire-and-forget, never blocks the update
-        }
-      }
+      if (isNew) logNewUser(bot, ctx.from); // fire-and-forget, never blocks the update
       if (ctx.message?.reply_to_message?.from) trackUser(ctx.message.reply_to_message.from);
     } catch (err) {
       logger.error(`trackUser middleware failed: ${err.message}`);

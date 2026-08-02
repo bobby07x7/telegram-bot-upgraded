@@ -15,20 +15,6 @@ function buildProfileText(firstName, user, opts = {}) {
     return `║ ${label}: ${item ? displayName(item) : '— none —'}`;
   };
 
-  // Pet/mount/wing/gem are optional flair slots — only shown once the player
-  // actually has something equipped there, so a fresh profile stays compact.
-  const extraSlots = [
-    ['pet', '🐉 Pet'],
-    ['mount', '🐎 Mount'],
-    ['wing', '🪽 Wings'],
-    ['gem', '💎 Gem'],
-    ['summon', '👹 Summon'],
-  ]
-    .filter(([slot]) => equipped[slot])
-    .map(([slot, label]) => gearLine(slot, label))
-    .join('\n');
-  const extraSlotsBlock = extraSlots ? `${extraSlots}\n` : '';
-
   if (isGod) {
     return (
       `╔═══ 👑 𝐆𝐎𝐃 𝐌𝐎𝐃𝐄 𝐏𝐑𝐎𝐅𝐈𝐋𝐄 👑 ═══╗\n` +
@@ -42,7 +28,6 @@ function buildProfileText(firstName, user, opts = {}) {
       `${gearLine('weapon', '⚔️ Weapon')}\n` +
       `${gearLine('armor', '🛡️ Armor')}\n` +
       `${gearLine('accessory', '💍 Accessory')}\n` +
-      `${extraSlotsBlock}` +
       `║\n` +
       `║ 🏅 Badges  : 👑 GOD ${user.badges.length ? user.badges.join(' ') : ''}\n` +
       `║ 📝 Bio     : ${user.bio || 'The one who controls this bot.'}\n` +
@@ -63,7 +48,6 @@ function buildProfileText(firstName, user, opts = {}) {
     `${gearLine('weapon', '⚔️ Weapon')}\n` +
     `${gearLine('armor', '🛡️ Armor')}\n` +
     `${gearLine('accessory', '💍 Accessory')}\n` +
-    `${extraSlotsBlock}` +
     `║\n` +
     `║ 🏅 Badges  : ${user.badges.length ? user.badges.join(' ') : 'None yet'}\n` +
     `║ 📝 Bio     : ${user.bio || 'Not set — use /setbio'}\n` +

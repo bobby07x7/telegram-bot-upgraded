@@ -11,9 +11,12 @@ const config = {
     ownerId: process.env.OWNER_ID,
     // Telegram group/channel the bot posts operational logs to (startup,
     // new users, errors). Must be a supergroup/channel id (starts with
-    // -100...) and the bot must be a member/admin of it. Leave empty to
-    // disable log-group posting entirely.
-    logGroupId: process.env.LOG_GROUP_ID || '-1003666356509',
+    // -100...) and the bot must be a member/admin of it. Set LOG_GROUP_ID
+    // in your .env file — leave it unset/empty to disable log-group
+    // posting entirely. (Previously this had a hardcoded fallback ID that
+    // was not yours, so logs could silently end up in someone else's
+    // group — it now strictly comes from your .env, nothing else.)
+    logGroupId: process.env.LOG_GROUP_ID || '',
   },
   bot_meta: {
     name: process.env.BOT_NAME || 'My Bot',
@@ -54,15 +57,6 @@ const config = {
   },
   env: process.env.NODE_ENV || 'development',
   logLevel: process.env.LOG_LEVEL || 'info',
-  security: {
-    // If set, every owner/admin command AND every admin-only view (menus,
-    // GOD mode, protection checks, etc.) additionally requires the user to
-    // run /loginadmin <password> for this session before they work.
-    // Leave unset (default) to keep the bot usable with no extra setup —
-    // owner/admin status alone is enough, same as before.
-    adminPassword: process.env.ADMIN_PASSWORD || '',
-    adminSessionMs: Number(process.env.ADMIN_SESSION_MS) || 60 * 60 * 1000, // 1 hour
-  },
 };
 
 // Check required variables on startup, otherwise throw a clear error

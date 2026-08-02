@@ -3,7 +3,7 @@ const { getItem, findItem, displayName } = require('../../database/items');
 
 module.exports = {
   name: 'equip',
-  description: 'Equip a weapon/armor/accessory/pet/mount/wing/gem/summon from your inventory — /equip <item>',
+  description: 'Equip a weapon/armor/accessory from your inventory — /equip <item>',
   execute: async (ctx) => {
     const id = ctx.from.id;
     const query = (ctx.message.text.split(' ').slice(1).join(' ') || '').trim();

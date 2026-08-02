@@ -1,31 +1,14 @@
 const { config } = require('../config/config');
 const { getState } = require('../database/botState');
-const { isLoggedIn } = require('./adminSession');
-
-/**
- * Is this user the bot owner, or an admin promoted via /addadmin — purely
- * by role, ignoring the /loginadmin password lock. Only /loginadmin itself
- * should use this (it needs to know "are you allowed to even try the
- * password" before a session exists yet).
- */
-function isOwnerOrAdminRole(userId) {
-  const state = getState();
-  return String(userId) === String(config.bot.ownerId) || state.extraAdmins.includes(String(userId));
-}
 
 /**
  * Is this user the bot owner, or an admin promoted via /addadmin?
  * Shared everywhere (command gating, menu filtering, action handlers)
  * so there's exactly one definition of "who can see owner-only stuff".
- *
- * If ADMIN_PASSWORD is configured, this additionally requires an active
- * /loginadmin session — role alone is no longer enough. If no password is
- * configured, this behaves exactly as before (role-only).
  */
 function isOwnerOrAdmin(userId) {
-  if (!isOwnerOrAdminRole(userId)) return false;
-  if (!config.security.adminPassword) return true;
-  return isLoggedIn(userId, config.security.adminSessionMs);
+  const state = getState();
+  return String(userId) === String(config.bot.ownerId) || state.extraAdmins.includes(String(userId));
 }
 
 /**
@@ -59,4 +42,4 @@ function getReplyTarget(ctx) {
   return ctx.message.reply_to_message?.from || null;
 }
 
-module.exports = { requireGroupAdmin, isPrivateChat, isOwnerOrAdmin, isOwnerOrAdminRole, getReplyTarget };
+module.exports = { requireGroupAdmin, isPrivateChat, isOwnerOrAdmin, getReplyTarget };

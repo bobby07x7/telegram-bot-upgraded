@@ -1,7 +1,7 @@
 const { getUser, saveUser } = require('../../database/store');
 const { getItem, displayName } = require('../../database/items');
 
-const VALID_SLOTS = ['weapon', 'armor', 'accessory', 'pet', 'mount', 'wing', 'gem', 'summon'];
+const VALID_SLOTS = ['weapon', 'armor', 'accessory'];
 
 module.exports = {
   name: 'unequip',

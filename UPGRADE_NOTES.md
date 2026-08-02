@@ -59,10 +59,11 @@ group/channel of your choice:
 - 🔴 Any uncaught error — command execution, inline-button actions,
   Telegraf-level errors, and process-level unhandled rejections/exceptions
 
-Configured via `LOG_GROUP_ID` in `.env` (defaults to `-1003666356509` if
-unset — **you must add the bot to that group as an admin** or log posts
-will just fail silently with a warning in the local log file; nothing
-else breaks). See the README for setup.
+Configured via `LOG_GROUP_ID` in `.env` — must be set to your own group's
+chat id (no hardcoded fallback anymore; leaving it empty just turns
+log-group posting off). **You must add the bot to that group as an
+admin** or log posts will just fail silently with a warning in the
+local log file; nothing else breaks. See the README for setup.
 
 ## Suggested next steps (not done in this pass, to keep changes reviewable)
 - Apply `playCombatAnimation` / `playEliminationCinematic` to `/rob`,

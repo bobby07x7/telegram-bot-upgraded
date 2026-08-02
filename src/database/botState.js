@@ -8,12 +8,6 @@ const DEFAULT_STATE = () => ({
   extraAdmins: [],
   disabledCommands: [],
   featureFlags: {},
-  // userId -> timestamp (ms) of last successful /loginadmin, used by the
-  // admin password lock (see core/adminSession.js).
-  adminSessions: {},
-  // userIds in here are silently skipped by the "new user" log-group post,
-  // managed via /logmanage (owner-only).
-  logIgnoreList: [],
 });
 
 function getState() {

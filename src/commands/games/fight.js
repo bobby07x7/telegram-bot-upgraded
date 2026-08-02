@@ -2,7 +2,7 @@ const { getUser, saveUser, addHistory } = require('../../database/store');
 const { config } = require('../../config/config');
 const { playCombatAnimation, buildHpBar } = require('../../core/uiHelper');
 const { protectMessage, isProtectedTarget } = require('../../core/godProtect');
-const { getProgress, saveProgress } = require('../../core/forge');
+const { getCombatBonus } = require('../../database/items');
 
 const HIT_VERBS = ['punches', 'kicks', 'slams', 'uppercuts', 'tackles', 'smashes'];
 
@@ -62,8 +62,8 @@ module.exports = {
       if (r2.user.balance < bet) return ctx.reply(`💸 ${target.first_name} doesn't have ${bet}${currencySymbol} to match your bet.`);
     }
 
-    const f1 = { id: ctx.from.id, name: ctx.from.first_name, hp: r1.hp, max: r1.maxHp };
-    const f2 = { id: target.id, name: target.first_name, hp: r2.hp, max: r2.maxHp };
+    const f1 = { id: ctx.from.id, name: ctx.from.first_name, hp: r1.hp, max: r1.maxHp, ...getCombatBonus(r1.user) };
+    const f2 = { id: target.id, name: target.first_name, hp: r2.hp, max: r2.maxHp, ...getCombatBonus(r2.user) };
 
     // --- Fully decide the fight up front (deterministic outcome), then only
     // reveal it round-by-round via the shared cinematic animation. ---
@@ -75,7 +75,12 @@ module.exports = {
     let defender = attacker === f1 ? f2 : f1;
     let rounds = 0;
     while (f1.hp > 0 && f2.hp > 0 && rounds < 20) {
-      const dmg = 8 + Math.floor(Math.random() * 15); // 8-22 damage per hit
+      // Base roll, plus a small edge from the attacker's upgraded weapon
+      // and the defender's upgraded armor (see /upgrade). Flavor on top
+      // of the random roll — never enough to make the outcome a foregone
+      // conclusion, and the winner is still whoever runs out HP last.
+      const rawDmg = 8 + Math.floor(Math.random() * 15) + attacker.atkBonus - defender.defBonus; // 8-22 base
+      const dmg = Math.max(1, rawDmg);
       const verb = HIT_VERBS[Math.floor(Math.random() * HIT_VERBS.length)];
       const crit = dmg >= 20;
       defender.hp = Math.max(0, defender.hp - dmg);
@@ -121,18 +126,6 @@ module.exports = {
 
     saveUser(winner.id, { hp: winnerHp, maxHp: winner.max, downedAt: null, xp: winXpResult.xp, level: winXpResult.level, balance: winnerBalance });
     saveUser(loser.id, { hp: loserHp, maxHp: loser.max, downedAt: loserDownedAt, xp: loseXpResult.xp, level: loseXpResult.level, balance: loserBalance });
-
-    // Weapon mastery: using a weapon in a won fight slowly levels it up.
-    const winnerWeaponId = winnerRecord.equipped?.weapon;
-    if (winnerWeaponId) {
-      const progress = getProgress(winnerRecord, winnerWeaponId);
-      const newXp = progress.masteryXp + 10;
-      const leveledUp = newXp >= progress.masteryLevel * 100 && progress.masteryLevel < 100;
-      saveProgress(winner.id, winnerWeaponId, {
-        masteryXp: leveledUp ? 0 : newXp,
-        masteryLevel: leveledUp ? progress.masteryLevel + 1 : progress.masteryLevel,
-      });
-    }
 
     addHistory(winner.id, { type: 'fight win', vs: loser.name, xpGained: winXp, bet });
     addHistory(loser.id, { type: 'fight loss', vs: winner.name, xpGained: loseXp, bet });

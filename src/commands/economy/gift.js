@@ -1,7 +1,6 @@
 const { getUser, saveUser } = require('../../database/store');
 const { findItem, displayName } = require('../../database/items');
 const { resolveTarget } = require('../../core/targetResolver');
-const { getProgress } = require('../../core/forge');
 
 module.exports = {
   name: 'gift',
@@ -22,9 +21,6 @@ module.exports = {
     if (!query || idx === -1) return ctx.reply('Item not found in your /inventory.');
 
     const stored = sender.inventory[idx];
-    if (item && getProgress(sender, item.id).locked) {
-      return ctx.reply(`🔒 ${displayName(item)} is locked. Use /itemlock ${item.id} to unlock it first.`);
-    }
     const newInv = [...sender.inventory];
     newInv.splice(idx, 1);
     saveUser(senderId, { inventory: newInv });
